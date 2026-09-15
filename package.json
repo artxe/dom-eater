@@ -1,47 +1,81 @@
 {
-	"author": "artxe2",
+	"author": "artxe",
 	"bugs": {
-		"url": "https://github.com/Artxe2/lube-series/issues"
+		"url": "https://github.com/artxe/dom-eater/issues"
 	},
-	"description": "AST parser for HTML that quotes JS statements using curly braces",
+	"description": "Fast, error-tolerant AST parser for markup in HTML, JSX/TSX, Pug and Razor templates and JavaScript/TypeScript",
 	"devDependencies": {
-		"rollup": "^4.9.0",
-		"typescript": "^5.3.3"
+		"@types/node": "^26.6.2",
+		"@typescript-eslint/parser": "^8.70.0",
+		"@typescript/native": "npm:typescript@^7.0.2",
+		"@vitest/coverage-v8": "^5.0.1",
+		"eslint": "^10.11.0",
+		"eslint-plugin-lube": "^0.6.0",
+		"parse5": "^8.0.1",
+		"pug-lexer": "^5.0.1",
+		"pug-parser": "^6.0.0",
+		"pug-strip-comments": "^2.0.0",
+		"typescript": "npm:@typescript/typescript6@^6.0.2",
+		"vitest": "^5.0.1"
 	},
+	"engines": { "node": ">=14" },
 	"exports": {
 		".": {
-			"import": "./src/index.js",
-			"require": "./dom-eater.cjs",
-			"types": "./types/index.d.ts"
-		},
-		"./@types": "./public.d.ts"
+			"types": "./types/index.d.ts",
+			"default": "./src/index.js"
+		}
 	},
+	"files": [
+		"CHANGELOG.md",
+		"public.d.ts",
+		"src",
+		"types/create_ast_syntax_error.*",
+		"types/index.*",
+		"types/parse_html/index.*",
+		"types/parse_jsx/index.*",
+		"types/parse_pug/index.*",
+		"types/parse_razor/index.*",
+		"types/parse_razor_component.*",
+		"types/parse_script.*"
+	],
+	"homepage": "https://github.com/artxe/dom-eater#readme",
 	"keywords": [
-		"dom-eater",
-		"text",
-		"dom",
+		"angular",
 		"ast",
-		"eat"
+		"dom",
+		"dom-eater",
+		"error-tolerant",
+		"html",
+		"jsx",
+		"lit",
+		"parser",
+		"pug",
+		"razor",
+		"svelte",
+		"template",
+		"tsx",
+		"typescript",
+		"vue"
 	],
 	"license": "MIT",
 	"main": "src/index.js",
 	"name": "dom-eater",
 	"repository": {
-		"directory": "packages/dom-eater",
 		"type": "git",
-		"url": "https://github.com/Artxe2/lube-series"
+		"url": "https://github.com/artxe/dom-eater"
 	},
 	"scripts": {
-		"cjs": "rollup src/index.js --file dom-eater.cjs --format cjs",
-		"dts": "node ../../scripts/tsc_with_clean.js dom-eater",
-		"test": "cd ../../dom-eater/test && vitest run"
+		"dts": "node scripts/tsc_with_clean.js",
+		"lint": "eslint --cache --fix . && tsc && tsc --noEmit --strict --skipLibCheck false --ignoreConfig public.d.ts",
+		"prepack": "pnpm dts",
+		"prepublishOnly": "pnpm lint && pnpm test",
+		"test": "vitest run --coverage"
 	},
+	"sideEffects": false,
+	"type": "module",
 	"types": "types/index.d.ts",
 	"typesVersions": {
-		"*": {
-			"@types": [ "public.d.ts" ],
-			"*": [ "types/index.d.ts" ]
-		}
+		"*": { "*": [ "types/index.d.ts" ] }
 	},
-	"version": "0.2.5"
+	"version": "1.0.0"
 }

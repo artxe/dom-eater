@@ -1,95 +1,39 @@
-import normalize_nodes from "./normalize_nodes.js"
-import parse_element from "./parse_element.js"
-import parse_script_block from "./parse_script_block.js"
-
-let stop_text_regex = /[<{]/
-
+import create_ast_syntax_error from "../create_ast_syntax_error.js"
+import not_string_result from "../not_string_result.js"
+import set_text from "../set_text.js"
+import parse_markup from "./parse_markup.js"
 /**
- * @param {string} text
- * @param {import("../../public.js").AstNode} node
- */
-let set_text = (text, node) => {
-	node.text = text.slice(node.start, node.end)
-	if (node.type == "Attribute") {
-		if (node.value !== true) {
-			set_text(text, node.value)
-		}
-	} else if (node.type == "Element") {
-		for (let attr of node.attributes) {
-			set_text(text, attr)
-		}
-		for (let child of node.children) {
-			set_text(text, child)
-		}
-	} else if (node.type == "Script") {
-		for (let string of node.strings) {
-			set_text(text, string)
-		}
-	} else if (node.type == "String") {
-		for (let script of node.scripts) {
-			set_text(text, script)
-		}
-	}
-}
-
-/**
- * @param {string} text
- * @param {true=} include_text
+ * Parses HTML and template files, such as Vue, Svelte and Angular templates, Alpine.js or HTMX, into an element tree.
+ * `{…}` blocks in text and attribute values become `Script` nodes with the string literals found in their code.
+ * Never throws: syntax errors are returned in `errors` while parsing goes on.
+ * Positions are UTF-16 offsets into `text`, with `start` inclusive and `end` exclusive.
+ * @param {string} text the markup to parse
+ * @param {boolean=} include_text `true` to add `text`, the source slice, to every node
  * @returns {{
- *   ast: import("../../public.js").AstNode[]
+ *   ast: import("../../public.js").Element["children"]
  *   errors: import("../../public.js").AstSyntaxError[]
- * }}
+ * }} `ast`: the top-level nodes; `errors`: the syntax errors, each with the `start` and `end` of the problem
+ * @example
+ * const [ p ] = parseHtml(`<p class="note {tone}">Hi {name}</p>`).ast
+ * if (p?.type == "Element") p.attributes.map(attribute => attribute.name) // [ "class" ]
  */
-export default (text, include_text) => {
+export default function(text, include_text) {
+	if (typeof text != "string") return not_string_result()
 	/** @type {import("../../public.js").AstSyntaxError[]} */
-	let errors = []
-	/** @type {import("../../public.js").AstNode[]} */
-	let ast_nodes = []
-	let start = 0
-	for (;;) {
-		let index = text.slice(start).search(stop_text_regex)
-		if (index >= 0) {
-			if (index) {
-				ast_nodes.push(
-					{
-						end: start + index,
-						start,
-						type: "Text"
-					}
-				)
-			}
-			if (text[start + index] == "<") {
-				let node = parse_element(text, errors, start + index)
-				ast_nodes.push(node)
-				start = node.end
-			} else {
-				let node = parse_script_block(text, errors, start + index)
-				ast_nodes.push(node)
-				start = node.end
-			}
-		} else {
-			if (start < text.length) {
-				ast_nodes.push(
-					{
-						end: text.length,
-						start,
-						type: "Text"
-					}
-				)
-			}
-			break
-		}
+	const errors = []
+	try {
+		const ast = parse_markup(text, errors)
+		if (include_text) set_text(text, ast)
+		return { ast, errors }
+	} catch (error) {
+		if (!(error instanceof RangeError)) throw error
+		errors.push(
+			create_ast_syntax_error(
+				"The input is nested too deeply.",
+				0,
+				text.length
+			)
+		)
+		return { ast: [], errors }
 	}
-	ast_nodes.sort(
-		(a, b) => a.start != b.start
-			? a.start - b.start
-			: a.end - b.end
-	)
-	normalize_nodes(text, ast_nodes, errors)
-	if (include_text) {
-		for (let node of ast_nodes) {
-			set_text(text, node)
-		}
-	}
-	return { ast: ast_nodes, errors }
 }

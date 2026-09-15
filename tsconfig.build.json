@@ -1,0 +1,16 @@
+{
+	"compilerOptions": {
+		"declaration": true,
+		"declarationDir": "types",
+		"declarationMap": true,
+		"emitDeclarationOnly": true,
+		"lib": [ "es2020" ],
+		"noEmit": false,
+		"rootDir": "src",
+		"skipLibCheck": false,
+		"target": "es2020",
+		"types": []
+	},
+	"extends": "./tsconfig.json",
+	"include": [ "src/**/*.js" ]
+}

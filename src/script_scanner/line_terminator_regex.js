@@ -1,0 +1,1 @@
+export default /[\n\r\u2028\u2029]/

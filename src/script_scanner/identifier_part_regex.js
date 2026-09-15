@@ -1,0 +1,1 @@
+export default /[\p{ID_Continue}$‌‍]/u

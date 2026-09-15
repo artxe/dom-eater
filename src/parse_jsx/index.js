@@ -1,87 +1,23 @@
-import parse_element from "./parse_element.js"
-import parse_script_backticks from "./parse_script_backticks.js"
-import parse_script_double_quotes from "./parse_script_double_quotes.js"
-import parse_script_single_quotes from "./parse_script_single_quotes.js"
-
-let stop_jsx_regex = /['"`]|<[A-Za-z]/
-
-/** @typedef {import("../../public.js").AstNode} */
-
+import not_string_result from "../not_string_result.js"
+import parse_script_markup from "./parse_script_markup.js"
 /**
- * @param {string} text
- * @param {import("../../public.js").AstNode} node
- */
-let set_text = (text, node) => {
-	node.text = text.slice(node.start, node.end)
-	if (node.type == "Attribute") {
-		if (node.value !== true) {
-			set_text(text, node.value)
-		}
-	} else if (node.type == "Element") {
-		for (let attr of node.attributes) {
-			set_text(text, attr)
-		}
-		for (let child of node.children) {
-			set_text(text, child)
-		}
-	} else if (node.type == "Script") {
-		for (let string of node.strings) {
-			set_text(text, string)
-		}
-		if (node.subType == "jsx") {
-			for (let element of node.elements) {
-				set_text(text, element)
-			}
-		}
-	} else if (node.type == "String") {
-		for (let script of node.scripts) {
-			set_text(text, script)
-		}
-	}
-}
-
-/**
- * @param {string} text
- * @param {true=} include_text
+ * Finds the JSX elements in JavaScript or TypeScript with JSX, such as `.jsx`, `.tsx`, `.js` or Astro files,
+ * and the markup of HTML templates: template literals tagged `html` or `svg`, preceded by an `html` block comment,
+ * or used as the value of a `template` property.
+ * The script itself is scanned, not parsed, the way the TypeScript parser reads it, so incomplete code is fine.
+ * Never throws: syntax errors are returned in `errors` while parsing goes on.
+ * Positions are UTF-16 offsets into `text`, with `start` inclusive and `end` exclusive.
+ * @param {string} text the source code to scan
+ * @param {boolean=} include_text `true` to add `text`, the source slice, to every node
  * @returns {{
- *   ast: import("../../public.js").AstNode[]
+ *   ast: import("../../public.js").Element[]
  *   errors: import("../../public.js").AstSyntaxError[]
- * }}
+ * }} `ast`: the top-level elements found in the script; `errors`: the syntax errors, each with the `start` and `end`
+ * of the problem
+ * @example
+ * parseJsx(`const App = () => <p className={cls}>Hi</p>`).ast.map(element => element.name) // [ "p" ]
  */
-export default (text, include_text) => {
-	/** @type {import("../../public.js").AstSyntaxError[]} */
-	let errors = []
-	/** @type {import("../../public.js").AstNode[]} */
-	let ast_nodes = []
-	let start = 0
-	for (;;) {
-		let index = text.slice(start).search(stop_jsx_regex)
-		if (index >= 0) {
-			if (text[start + index] == "<") {
-				let node = parse_element(text, errors, start + index)
-				ast_nodes.push(node)
-				start = node.end
-			} else if (text[start + index] == "'") {
-				let node = parse_script_single_quotes(text, errors, start + index)
-				start = node.end
-			} else if (text[start + index] == "\"") {
-				let node = parse_script_double_quotes(text, errors, start + index)
-				start = node.end
-			} else {
-				let node = parse_script_backticks(text, errors, start + index)
-				start = node.end
-			}
-		} else break
-	}
-	ast_nodes.sort(
-		(a, b) => a.start != b.start
-			? a.start - b.start
-			: a.end - b.end
-	)
-	if (include_text) {
-		for (let node of ast_nodes) {
-			set_text(text, node)
-		}
-	}
-	return { ast: ast_nodes, errors }
+export default function(text, include_text) {
+	if (typeof text != "string") return not_string_result()
+	return parse_script_markup(text, include_text, true)
 }

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <OutputType>Exe</OutputType>
+    <RazorTools>$(MSBuildSDKsPath)\Microsoft.NET.Sdk.Razor\tools\</RazorTools>
+    <RoslynBin>$(MSBuildSDKsPath)\..\Roslyn\bincore\</RoslynBin>
+    <TargetFramework>net$(BundledNETCoreAppTargetFrameworkVersion)</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <AssemblyMetadata Include="RazorTools" Value="$(RazorTools)" />
+    <AssemblyMetadata Include="RoslynBin" Value="$(RoslynBin)" />
+    <Reference Include="Microsoft.CodeAnalysis" HintPath="$(RoslynBin)Microsoft.CodeAnalysis.dll" />
+    <Reference Include="Microsoft.CodeAnalysis.CSharp" HintPath="$(RoslynBin)Microsoft.CodeAnalysis.CSharp.dll" />
+    <Reference Include="Microsoft.CodeAnalysis.Razor.Compiler" HintPath="$(RazorTools)Microsoft.CodeAnalysis.Razor.Compiler.dll" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,2 @@
+minimumReleaseAgeExclude:
+  - eslint-plugin-lube@0.6.0
