@@ -356,10 +356,11 @@ export function typescript_differential(jsx, count) {
  * @returns {string[] | undefined}
  */
 export function typescript_problems(code, jsx) {
-	const diagnostics = /** @type {unknown[]} */(Reflect.get(
+	/** @type {unknown[]} */
+	const diagnostics = Reflect.get(
 		parse_typescript(code, jsx),
 		"parseDiagnostics"
-	))/**/
+	)
 	if (diagnostics.length) return undefined
 	try {
 		expect(dom_eater_ranges(code, jsx)).toStrictEqual(typescript_ranges(code, jsx))

@@ -392,7 +392,8 @@ export function fuzz_invariants(name, count) {
  */
 export function fuzz_source(name, seed) {
 	const next = random(seed)
-	const own = /** @type {string[]} */(fragments[name])/**/
+	/** @type {string[]} */
+	const own = fragments[name]
 	const bases = test_strings(name)
 	const mode = next()
 	if (mode < 0.3) {

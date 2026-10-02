@@ -35,7 +35,8 @@ function packed_files() {
 			stdio: [ "ignore", "pipe", "ignore" ]
 		}
 	)
-	const [ result ] = /** @type {{ files: { path: string }[] }[]} */(JSON.parse(output))/**/
+	/** @type {{ files: { path: string }[] }[]} */
+	const [ result ] = JSON.parse(output)
 	return /** @type {{ files: { path: string }[] }} */(result)/**/.files.map(file => file.path)
 }
 describe(
@@ -44,12 +45,13 @@ describe(
 		it(
 			"ships every declaration the entries reach, and nothing private",
 			() => {
-				const manifest = /** @type {Record<string, unknown>} */(JSON.parse(
+				/** @type {Record<string, unknown>} */
+				const manifest = JSON.parse(
 					readFileSync(
 						join(package_path, "package.json"),
 						"utf8"
 					)
-				))/**/
+				)
 				const files = packed_files()
 				const packed = new Set(files)
 				for (const doc of [

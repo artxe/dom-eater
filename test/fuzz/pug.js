@@ -9,8 +9,10 @@ import { parsePug } from "dom-eater"
 import { createRequire } from "node:module"
 import lex from "pug-lexer"
 const require = createRequire(import.meta.url)
-const parse_tokens = /** @type {(tokens: unknown, options: { filename: string, src: string }) => unknown} */(require("pug-parser"))/**/
-const strip_comments = /** @type {(tokens: unknown, options: { filename: string }) => unknown} */(require("pug-strip-comments"))/**/
+/** @type {(tokens: unknown, options: { filename: string, src: string }) => unknown} */
+const parse_tokens = require("pug-parser")
+/** @type {(tokens: unknown, options: { filename: string }) => unknown} */
+const strip_comments = require("pug-strip-comments")
 const fixtures = [
 	"doctype html\nhtml(lang=\"en\")\n  head\n    title= pageTitle\n    script(type='text/javascript').\n      if (foo) bar(1 + 5)\n  body\n    h1#title.main Pug - node template engine\n    #container.col\n      if youAreUsingPug\n        p You are amazing\n      else\n        p Get on it!\n      p.\n        Pug is a terse and simple templating language.\n",
 	"extends layout\nblock content\n  - var items = [\"a\", 'b']\n  ul.list(data-count=items.length)\n    each item, i in items\n      li(class=\"item-\" + i, title=`${item}`)= item\n    else\n      li.empty No items\n",

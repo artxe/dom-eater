@@ -186,7 +186,7 @@ export function razor_differential(component, count) {
 				.forEach(
 					(line, j) => cache.set(
 						/** @type {string} */(batch[j])/**/,
-						/** @type {{ diagnostics: number, error: string | null, items: string[] }} */(JSON.parse(line))/**/
+						JSON.parse(line)
 					)
 				)
 		}
