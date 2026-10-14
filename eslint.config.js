@@ -4,6 +4,8 @@ import lube from "eslint-plugin-lube"
 export default [
 	{
 		ignores: [
+			".claude/settings*.json",
+			".tmp/**",
 			"coverage/**",
 			"test/fuzz/razor/bin/**",
 			"test/fuzz/razor/obj/**",
@@ -11,12 +13,7 @@ export default [
 		]
 	},
 	{
-		files: [
-			"**/*.js",
-			"**/*.json",
-			"**/*.mjs",
-			"**/*.ts"
-		],
+		files: [ "**/*.js", "**/*.json", "**/*.ts" ],
 		languageOptions: {
 			ecmaVersion: "latest",
 			parser,

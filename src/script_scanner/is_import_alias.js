@@ -12,14 +12,22 @@ export default function(text, index, state) {
 	while (text[i] == ".") {
 		const end = previous_index(text, i, state)
 		let start = end
-		while (identifier_part_regex.test(text[start] ?? "")) start--
-		if (start == end) return false
+		while (identifier_part_regex.test(text[start] ?? "")) {
+			start--
+		}
+		if (start == end) {
+			return false
+		}
 		i = previous_index(text, start + 1, state)
 	}
-	if (text[i] != "=") return false
+	if (text[i] != "=") {
+		return false
+	}
 	const name_end = previous_index(text, i, state)
 	const name = previous_word(text, name_end)
-	if (!name) return false
+	if (!name) {
+		return false
+	}
 	const keyword_end = previous_index(
 		text,
 		name_end - name.length + 1,

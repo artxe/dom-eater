@@ -6,6 +6,10 @@ import is_whitespace from "./is_whitespace.js"
  */
 export default function(text, index) {
 	let i = index
-	while (i < text.length && is_whitespace(text[i] ?? "")) i++
+	while (i < text.length && is_whitespace(
+		/** @type {string} */(text[i])/**/
+	)) {
+		i++
+	}
 	return i
 }

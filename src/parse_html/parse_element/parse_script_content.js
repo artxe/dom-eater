@@ -23,7 +23,11 @@ const stop_script_content_regex = new RegExp(
  */
 function is_line_start(text, start, index) {
 	let i = index - 1
-	while (i >= start && text[i] != "\n" && whitespace_regex.test(text[i] ?? "")) i--
+	while (i >= start && text[i] != "\n" && whitespace_regex.test(
+		/** @type {string} */(text[i])/**/
+	)) {
+		i--
+	}
 	return i < start || text[i] == "\n"
 }
 /**
@@ -44,7 +48,9 @@ export default function(text, errors, start) {
 	const strings = []
 	for (;;) {
 		const child_index = content.slice(child_pre_index).search(stop_script_content_regex)
-		if (child_index < 0) break
+		if (child_index < 0) {
+			break
+		}
 		const index = child_pre_index + child_index
 		if (content[index] == "-") {
 			child_pre_index = is_line_start(content, start, index)

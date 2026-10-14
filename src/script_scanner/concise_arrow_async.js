@@ -12,13 +12,19 @@ import statement_words from "./statement_words.js"
  */
 export default function(text, index, operand_start, state) {
 	const bracket = current_bracket(state)
-	if (bracket.arrow < 0) return undefined
+	if (bracket.arrow < 0) {
+		return undefined
+	}
 	let i = index
 	let operand_after = operand_start
 	for (;;) {
-		if (i <= bracket.arrow_inside) break
+		if (i <= bracket.arrow_inside) {
+			break
+		}
 		const token = previous_token(text, i, state)
-		if (token.kind == "punctuator" && token.start == bracket.arrow + 1) break
+		if (token.kind == "punctuator" && token.start == bracket.arrow + 1) {
+			break
+		}
 		const ends = token.start < bracket.arrow
 			|| (token.kind == "punctuator"
 				? ",;".includes(token.value)

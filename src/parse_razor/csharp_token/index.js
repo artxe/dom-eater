@@ -184,8 +184,12 @@ const punctuator_kinds = new Set(
  */
 function conflict_disabled_end(text, index, marker) {
 	for (let i = index; i < text.length; i++) {
-		if (marker == "|" && text[i] == "=" && is_conflict_marker(text, i)) return i
-		if (text[i] == ">" && is_conflict_marker(text, i)) return line_end(text, i)
+		if (marker == "|" && text[i] == "=" && is_conflict_marker(text, i)) {
+			return i
+		}
+		if (text[i] == ">" && is_conflict_marker(text, i)) {
+			return line_end(text, i)
+		}
 	}
 	return text.length
 }
@@ -197,13 +201,17 @@ function conflict_disabled_end(text, index, marker) {
  */
 function disabled_text_end(text, index, directive_end) {
 	const directive = read_directive(text, index)
-	if (!directive) return directive_end
+	if (!directive) {
+		return directive_end
+	}
 	if (directive.name == "if") {
 		return evaluate_condition(directive.condition)
 			? directive_end
 			: skip_disabled_lines(text, directive_end)
 	}
-	if (directive.name != "elif" && directive.name != "else") return directive_end
+	if (directive.name != "elif" && directive.name != "else") {
+		return directive_end
+	}
 	let depth = 0
 	let taken = false
 	for (let start = line_start(text, index); start > 0;) {
@@ -213,15 +221,21 @@ function disabled_text_end(text, index, directive_end) {
 			depth++
 		} else if (previous?.name == "if") {
 			if (!depth) {
-				if (!taken) taken = evaluate_condition(previous.condition)
+				if (!taken) {
+					taken = evaluate_condition(previous.condition)
+				}
 				break
 			}
 			depth--
 		} else if (previous?.name == "elif" && !depth) {
-			if (!taken) taken = evaluate_condition(previous.condition)
+			if (!taken) {
+				taken = evaluate_condition(previous.condition)
+			}
 		}
 	}
-	if (taken) return skip_disabled_lines(text, directive_end)
+	if (taken) {
+		return skip_disabled_lines(text, directive_end)
+	}
 	return directive.name == "else" || evaluate_condition(directive.condition)
 		? directive_end
 		: skip_disabled_lines(text, directive_end)
@@ -235,10 +249,14 @@ function doc_comment_end(text, index) {
 	let i = index
 	for (;;) {
 		i = line_end(text, i)
-		if (i >= text.length) return i
+		if (i >= text.length) {
+			return i
+		}
 		i = newline_end(text, i)
 		const next = skip_whitespace(text, i)
-		if (!text.startsWith("///", next) || text[next + 3] == "/") return i
+		if (!text.startsWith("///", next) || text[next + 3] == "/") {
+			return i
+		}
 	}
 }
 /**
@@ -291,7 +309,9 @@ function evaluate_condition(condition) {
 	 */
 	function primary() {
 		const token = tokens[position++]
-		if (token == "!") return !primary()
+		if (token == "!") {
+			return !primary()
+		}
 		if (token == "(") {
 			const value = or()
 			position++
@@ -309,14 +329,18 @@ function evaluate_condition(condition) {
 function identifier_end(text, index) {
 	let i = index
 	for (;;) {
-		while (is_ascii_identifier_code(text.charCodeAt(i))) i++
+		while (is_ascii_identifier_code(text.charCodeAt(i))) {
+			i++
+		}
 		identifier_part_regex.lastIndex = i
 		identifier_part_regex.test(text)
 		i = identifier_part_regex.lastIndex
 		const escape = text[i] == "\\"
-			? unicode_escape(text, i)
+			? unicode_escape(text, i) ?? invalid_escape(text, i)
 			: undefined
-		if (!escape || !identifier_char_regex.test(escape.char)) return i
+		if (!escape || !identifier_char_regex.test(escape.char)) {
+			return i
+		}
 		i = escape.end
 	}
 }
@@ -341,6 +365,35 @@ function integer_suffix_end(text, index) {
 	return index
 }
 /**
+ * @param {string} text
+ * @param {number} index
+ * @returns {{ char: string, end: number } | undefined}
+ */
+function invalid_escape(text, index) {
+	const length = text[index + 1] == "u"
+		? 4
+		: text[index + 1] == "U"
+			? 8
+			: 0
+	if (!length) {
+		return
+	}
+	let end = index + 2
+	while (end < index + 2 + length && hex_regex.test(text.charAt(end))) {
+		end++
+	}
+	const digits = text.slice(index + 2, end)
+	const code = parseInt(digits || "0", 16)
+	return {
+		char: !digits || end - index == 2 + length && code > 0x10ffff
+			? "_"
+			: code > 0xffff
+				? ""
+				: String.fromCharCode(code),
+		end
+	}
+}
+/**
  * @param {number} code
  * @returns {boolean}
  */
@@ -356,9 +409,13 @@ function is_ascii_identifier_code(code) {
  * @returns {boolean}
  */
 function is_conflict_marker(text, index) {
-	const marker = text[index] ?? ""
-	if (index > 0 && !is_newline(text[index - 1] ?? "")) return false
-	if (text.slice(index, index + 7) != marker.repeat(7)) return false
+	const marker = text.charAt(index)
+	if (index > 0 && !is_newline(text.charAt(index - 1))) {
+		return false
+	}
+	if (text.slice(index, index + 7) != marker.repeat(7)) {
+		return false
+	}
 	return marker == "=" || marker == "|" || text[index + 7] == " "
 }
 /**
@@ -368,8 +425,10 @@ function is_conflict_marker(text, index) {
  */
 function is_line_start(text, index) {
 	let i = index - 1
-	while (i >= 0 && is_whitespace(text[i] ?? "")) i--
-	return i < 0 || is_newline(text[i] ?? "")
+	while (i >= 0 && is_whitespace(text.charAt(i))) {
+		i--
+	}
+	return i < 0 || is_newline(text.charAt(i))
 }
 /**
  * @param {string} text
@@ -378,7 +437,9 @@ function is_line_start(text, index) {
  */
 function line_start(text, index) {
 	let i = index
-	while (i > 0 && !is_newline(text[i - 1] ?? "")) i--
+	while (i > 0 && !is_newline(text.charAt(i - 1))) {
+		i--
+	}
 	return i
 }
 /**
@@ -410,7 +471,9 @@ function number_end(text, index) {
 	if (text[i] == "e" || text[i] == "E") {
 		real = true
 		i++
-		if (text[i] == "+" || text[i] == "-") i++
+		if (text[i] == "+" || text[i] == "-") {
+			i++
+		}
 		decimal_digit_regex.lastIndex = i
 		decimal_digit_regex.test(text)
 		i = decimal_digit_regex.lastIndex
@@ -479,11 +542,15 @@ function operator_end(text, index) {
  */
 function read_directive(text, index) {
 	let i = skip_whitespace(text, index)
-	if (text[i] != "#") return
+	if (text[i] != "#") {
+		return
+	}
 	i = skip_whitespace(text, i + 1)
 	directive_name_regex.lastIndex = i
 	const match = directive_name_regex.exec(text)
-	if (!match) return
+	if (!match) {
+		return
+	}
 	return {
 		condition: text.slice(
 			directive_name_regex.lastIndex,
@@ -499,7 +566,9 @@ function read_directive(text, index) {
  */
 function scan_token(text, index) {
 	const char = text[index]
-	if (char === undefined) return
+	if (char === undefined) {
+		return
+	}
 	const next = text[index + 1]
 	if (is_whitespace(char)) {
 		return {
@@ -641,13 +710,17 @@ function skip_disabled_lines(text, index) {
 		if (directive?.name == "if") {
 			depth++
 		} else if (directive?.name == "endif") {
-			if (!depth) return i
+			if (!depth) {
+				return i
+			}
 			depth--
 		} else if ((directive?.name == "elif" || directive?.name == "else") && !depth) {
 			return i
 		}
 		i = line_end(text, i)
-		if (i < text.length) i = newline_end(text, i)
+		if (i < text.length) {
+			i = newline_end(text, i)
+		}
 	}
 	return text.length
 }
@@ -659,7 +732,9 @@ function skip_disabled_lines(text, index) {
  */
 function suffix_end(text, index, real) {
 	const char = text[index]
-	if (char == "f" || char == "F" || char == "d" || char == "D" || char == "m" || char == "M") return index + 1
+	if (char == "f" || char == "F" || char == "d" || char == "D" || char == "m" || char == "M") {
+		return index + 1
+	}
 	return real
 		? index
 		: integer_suffix_end(text, index)
@@ -675,13 +750,19 @@ function unicode_escape(text, index) {
 		: text[index + 1] == "U"
 			? 8
 			: 0
-	if (!length) return
+	if (!length) {
+		return
+	}
 	const digits = text.slice(index + 2, index + 2 + length)
-	if (digits.length < length || !hex_regex.test(digits)) return
+	if (digits.length < length || !hex_regex.test(digits)) {
+		return
+	}
 	const code = parseInt(digits, 16)
-	if (code > 0x10ffff) return
+	if (code > 0x10ffff) {
+		return
+	}
 	return {
-		char: String.fromCodePoint(code)[0] ?? "",
+		char: String.fromCodePoint(code).charAt(0),
 		end: index + 2 + length
 	}
 }
@@ -691,7 +772,9 @@ function unicode_escape(text, index) {
  * @returns {import("../../../private.js").RazorToken | undefined}
  */
 export default function(text, index) {
-	if (cache.index == index && cache.text === text) return cache.token
+	if (cache.index == index && cache.text === text) {
+		return cache.token
+	}
 	const token = scan_token(text, index)
 	cache.index = index
 	cache.text = text

@@ -30,12 +30,14 @@ const whitespace_regex = /\s/
  */
 function add_icu_brace_starts(text, index, brace_starts) {
 	icu_regex.lastIndex = index
-	if (!icu_regex.test(text)) return false
+	if (!icu_regex.test(text)) {
+		return false
+	}
 	const case_depths = [ 1 ]
 	let depth = 1
 	for (let i = icu_regex.lastIndex; depth && i < text.length; i++) {
 		const char = text[i]
-		const case_depth = case_depths[case_depths.length - 1] ?? 0
+		const case_depth = /** @type {number} */(case_depths[case_depths.length - 1])/**/
 		if (depth > case_depth && char == "{" && text[i + 1] == "{") {
 			i = interpolation_end(text, i) - 1
 		} else if (depth > case_depth && char == "<" && tag_start_regex.test(text[i + 1] ?? "")) {
@@ -53,7 +55,9 @@ function add_icu_brace_starts(text, index, brace_starts) {
 			}
 		} else if (char == "}") {
 			depth--
-			if (depth < case_depth) case_depths.pop()
+			if (depth < case_depth) {
+				case_depths.pop()
+			}
 		}
 	}
 	return true
@@ -69,11 +73,19 @@ function interpolation_end(text, index) {
 	let quote
 	for (let i = index + 2; i < text.length; i++) {
 		const char = text[i]
-		if (!quote && text.startsWith("}}", i)) return i + 2
-		if (!quote && text.startsWith("//", i)) comment = true
-		if (char == "\\") i++
-		else if (char == quote) quote = undefined
-		else if (!comment && !quote && (char == "\"" || char == "'" || char == "`")) quote = char
+		if (!quote && text.startsWith("}}", i)) {
+			return i + 2
+		}
+		if (!quote && text.startsWith("//", i)) {
+			comment = true
+		}
+		if (char == "\\") {
+			i++
+		} else if (char == quote) {
+			quote = undefined
+		} else if (!comment && !quote && (char == "\"" || char == "'" || char == "`")) {
+			quote = char
+		}
 	}
 	return text.length
 }
@@ -106,8 +118,11 @@ function let_declaration_end(text, index) {
 	for (let i = index; i < text.length; i++) {
 		const char = text[i]
 		if (quote) {
-			if (char == "\\") i++
-			else if (char == quote) quote = undefined
+			if (char == "\\") {
+				i++
+			} else if (char == quote) {
+				quote = undefined
+			}
 		} else if (char == "\"" || char == "'" || char == "`") {
 			quote = char
 		} else if (char == "(" || char == "[" || char == "{") {
@@ -128,7 +143,9 @@ function let_declaration_end(text, index) {
  * @returns {import("../../private.js").MarkupNode}
  */
 function parse_markup_node(text, errors, index, foreign) {
-	if (text[index] == "{") return parse_script_block(text, errors, index)
+	if (text[index] == "{") {
+		return parse_script_block(text, errors, index)
+	}
 	doctype_regex.lastIndex = index
 	return (text[index + 1] == "!" || text[index + 1] == "%" || text[index + 1] == "?") && !doctype_regex.test(text)
 		? parse_comment(text, errors, index, foreign)
@@ -157,14 +174,20 @@ function skip_angular_syntax(
 			)
 	}
 	angular_block_regex.lastIndex = start
-	if (!angular_block_regex.test(text)) return -1
+	if (!angular_block_regex.test(text)) {
+		return -1
+	}
 	let index = angular_block_regex.lastIndex
 	if (text[index] == "(") {
 		index = index > last_parenthesis
 			? -1
 			: skip_parentheses(text, index)
-		if (index < 0) return -1
-		while (whitespace_regex.test(text[index] ?? "")) index++
+		if (index < 0) {
+			return -1
+		}
+		while (whitespace_regex.test(text[index] ?? "")) {
+			index++
+		}
 	}
 	return text[index] == "{"
 		? index + 1
@@ -181,7 +204,9 @@ function tag_end(text, start) {
 	for (let i = start + 1; i < text.length; i++) {
 		const char = text[i]
 		if (quote) {
-			if (char == quote) quote = undefined
+			if (char == quote) {
+				quote = undefined
+			}
 		} else if (char == "\"" || char == "'") {
 			quote = char
 		} else if (char == ">") {
@@ -217,10 +242,14 @@ function template_text_end(text, index) {
 	}
 	template_raw_regex.lastIndex = index
 	const raw = template_raw_regex.exec(text)
-	if (!raw) return -1
+	if (!raw) {
+		return -1
+	}
 	template_raw_end_regex.lastIndex = template_raw_regex.lastIndex
 	for (let end = template_raw_end_regex.exec(text); end; end = template_raw_end_regex.exec(text)) {
-		if (end[1] == raw[1]) return template_raw_end_regex.lastIndex
+		if (end[1] == raw[1]) {
+			return template_raw_end_regex.lastIndex
+		}
 	}
 	return text.length
 }
@@ -231,15 +260,23 @@ function template_text_end(text, index) {
  * @returns {void}
  */
 function track_namespace(text, node, namespaces) {
-	if (node.type != "Element") return
+	if (node.type != "Element") {
+		return
+	}
 	const name = node.name.toLowerCase()
 	if (node.subType == "close") {
 		let index = namespaces.length - 1
-		while (index >= 0 && namespaces[index]?.name != name) index--
-		if (index >= 0) namespaces.length = index
+		while (index >= 0 && namespaces[index]?.name != name) {
+			index--
+		}
+		if (index >= 0) {
+			namespaces.length = index
+		}
 		return
 	}
-	if (node.subType != "open") return
+	if (node.subType != "open") {
+		return
+	}
 	const namespace = namespaces[namespaces.length - 1]?.namespace ?? "html"
 	if (name == "math" || name == "svg") {
 		namespaces.push({ name, namespace: name })
@@ -308,9 +345,13 @@ export default function(text, errors, substitution_starts) {
 		/** @type {import("../../private.js").MarkupNode | undefined} */
 		let node
 		try {
-			if (child_index >= 0) node = parse_markup_node(text, errors, index, foreign)
+			if (child_index >= 0) {
+				node = parse_markup_node(text, errors, index, foreign)
+			}
 		} catch (error) {
-			if (!(error instanceof RangeError)) throw error
+			if (!(error instanceof RangeError)) {
+				throw error
+			}
 			errors.length = error_count
 			errors.push(
 				create_ast_syntax_error(
@@ -349,8 +390,12 @@ export default function(text, errors, substitution_starts) {
 				}
 			)
 		}
-		if (!node) break
-		if (foreign) foreign_nodes.add(node)
+		if (!node) {
+			break
+		}
+		if (foreign) {
+			foreign_nodes.add(node)
+		}
 		track_namespace(text, node, namespaces)
 		ast_nodes.push(node)
 		text_start = search_start = node.end

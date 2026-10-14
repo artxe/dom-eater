@@ -12,13 +12,32 @@ import parser_state from "./parser_state.js"
 import skip_html_whitespace from "./skip_html_whitespace.js"
 /**
  * @param {string} text
+ * @param {import("../../private.js").RazorFrame} root
+ * @returns {void}
+ */
+function flush_whitespace(text, root) {
+	const whitespace_end = skip_spaces(text, root.flushed)
+	const newline = html_token(text, whitespace_end)
+	root.flushed = newline?.kind == "nl"
+		? newline.end
+		: whitespace_end
+}
+/**
+ * @param {string} text
  * @param {number} index
+ * @param {number} flushed
  * @returns {boolean}
  */
-function is_line_start(text, index) {
+function is_line_start(text, index, flushed) {
 	let i = index
-	while (i > 0 && is_whitespace(text[i - 1] ?? "")) i--
-	return i == 0 || is_newline(text[i - 1] ?? "")
+	while (i > flushed && is_whitespace(
+		/** @type {string} */(text[i - 1])/**/
+	)) {
+		i--
+	}
+	return i <= flushed || is_newline(
+		/** @type {string} */(text[i - 1])/**/
+	)
 }
 /**
  * @param {import("../../private.js").RazorContext} ctx
@@ -38,12 +57,18 @@ function parse_comment(ctx, frames, index) {
 			"text",
 			token => token.kind == "--"
 		)
-		if (i >= text.length) break
+		if (i >= text.length) {
+			break
+		}
 		let last = i
-		while (html_token(text, last + 2)?.kind == "--") last += 2
+		while (html_token(text, last + 2)?.kind == "--") {
+			last += 2
+		}
 		let after = last + 2
 		const hyphen = html_token(text, after)
-		if (is_hyphen(text, after, hyphen)) after++
+		if (is_hyphen(text, after, hyphen)) {
+			after++
+		}
 		if (html_token(text, after)?.kind == ">") {
 			current_frame(frames).children.push(
 				{
@@ -97,7 +122,9 @@ function parse_until(ctx, root, index, sequence) {
 			}
 			i = token.end
 		}
-		if (matched) break
+		if (matched) {
+			break
+		}
 	}
 	root.flushed = frame.flushed
 	return i
@@ -109,7 +136,9 @@ function parse_until(ctx, root, index, sequence) {
  */
 function skip_spaces(text, index) {
 	let i = index
-	for (let token = html_token(text, i); token?.kind == "ws"; token = html_token(text, i)) i = token.end
+	for (let token = html_token(text, i); token?.kind == "ws"; token = html_token(text, i)) {
+		i = token.end
+	}
 	return i
 }
 /**
@@ -124,27 +153,25 @@ export default function(ctx, frames, index, mode) {
 	const state = parser_state(ctx, index, mode)
 	const start = skip_html_whitespace(text, index)
 	const root = /** @type {import("../../private.js").RazorFrame} */(frames[0])/**/
-	if (state == "eof") return index
-	if (ctx.null_generate && (state == "misc" || state == "razor_comment" || state == "code_transition")) {
-		ctx.null_generate = false
-		let whitespace_end = index
-		whitespace_end = skip_spaces(text, whitespace_end)
-		const newline = html_token(text, whitespace_end)
-		root.flushed = newline?.kind == "nl"
-			? newline.end
-			: whitespace_end
+	const resumes = ctx.null_generate && ctx.null_generate_dirty && (state == "razor_comment" || state == "code_transition")
+	if (resumes) {
+		ctx.null_generate_dirty = false
+	} else if (ctx.null_generate && !ctx.null_generate_dirty && (state == "misc" || state == "razor_comment" || state == "code_transition" || state == "double_transition")) {
+		ctx.null_generate = state == "double_transition"
+		ctx.null_generate_dirty = ctx.null_generate
+		root.flushed = index
+		flush_whitespace(text, root)
+	} else if (state == "markup_text" || state == "unknown") {
+		ctx.null_generate_dirty = ctx.null_generate
 	}
-	if (state == "misc") return start
-	if (state == "markup_text" || state == "unknown") return html_token(text, index)?.end ?? index + 1
+	if (state == "misc") {
+		return start
+	}
+	if (state == "markup_text" || state == "unknown") {
+		return /** @type {import("../../private.js").RazorToken} */(html_token(text, index))/**/.end
+	}
 	if (state == "tag") {
-		root.flushed = parse_markup_element(
-			ctx,
-			frames,
-			index,
-			mode == "code"
-				? "code"
-				: "markup"
-		)
+		root.flushed = parse_markup_element(ctx, frames, index, "markup")
 		return root.flushed
 	}
 	if (state == "markup_comment") {
@@ -152,7 +179,9 @@ export default function(ctx, frames, index, mode) {
 		return root.flushed
 	}
 	if (state == "special_tag" || state == "xml_pi" || state == "cdata") {
-		if (state == "special_tag") root.flushed = index
+		if (state == "special_tag") {
+			root.flushed = index
+		}
 		const end = state == "special_tag"
 			? parse_until(ctx, root, index, [ ">" ])
 			: state == "xml_pi"
@@ -169,22 +198,30 @@ export default function(ctx, frames, index, mode) {
 		return end
 	}
 	if (state == "razor_comment") {
-		const end = html_token(text, start)?.end ?? text.length
-		if (!text.startsWith("*@", end - 2) || end - start < 4) add_error(
-			ctx,
-			"The Razor comment is not closed.",
-			start,
-			end
-		)
+		const end = /** @type {import("../../private.js").RazorToken} */(html_token(text, start))/**/.end
+		if (!text.startsWith("*@", end - 2) || end - start < 4) {
+			add_error(
+				ctx,
+				"The Razor comment is not closed.",
+				start,
+				end
+			)
+		}
 		current_frame(frames).children.push(
 			{ end, start, type: "Comment" }
 		)
+		const line_start = is_line_start(text, start, root.flushed)
 		root.flushed = end
-		if (is_line_start(text, start)) {
+		if (line_start) {
 			let whitespace_end = end
 			whitespace_end = skip_spaces(text, whitespace_end)
 			const newline = html_token(text, whitespace_end)
-			if (newline?.kind == "nl") root.flushed = newline.end
+			if (newline?.kind == "nl") {
+				root.flushed = newline.end
+			}
+		}
+		if (resumes) {
+			flush_whitespace(text, root)
 		}
 		return root.flushed
 	}
@@ -195,5 +232,8 @@ export default function(ctx, frames, index, mode) {
 	const script = parse_razor_script(ctx, start)
 	current_frame(frames).children.push(script.node)
 	root.flushed = script.end
+	if (resumes) {
+		flush_whitespace(text, root)
+	}
 	return script.end
 }

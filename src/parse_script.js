@@ -18,6 +18,8 @@ import parse_script_markup from "./parse_jsx/parse_script_markup.js"
  * parseScript("render(html`<p class=\"a\">${b}</p>`)").ast.map(element => element.name) // [ "p" ]
  */
 export default function(text, include_text) {
-	if (typeof text != "string") return not_string_result()
+	if (typeof text != "string") {
+		return not_string_result()
+	}
 	return parse_script_markup(text, include_text, false)
 }

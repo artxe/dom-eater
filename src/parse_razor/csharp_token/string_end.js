@@ -11,6 +11,8 @@ export default function(text, index) {
 	if (text[index] == "$" || text[index] == "@" && text[skip_run(text, index, "@")] == "$") {
 		return interpolated_end(text, index)
 	}
-	if (text[index] == "@") return verbatim_end(text, index)
+	if (text[index] == "@") {
+		return verbatim_end(text, index)
+	}
 	return string_literal_end(text, index)
 }

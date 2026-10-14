@@ -31,7 +31,9 @@ export default function(text, index, state) {
 		}
 	}
 	let start = i
-	while (identifier_part_regex.test(text[start - 1] ?? "")) start--
+	while (identifier_part_regex.test(text[start - 1] ?? "")) {
+		start--
+	}
 	const flags_of = state.openings.get(start)
 	if (text[start - 1] == "/" && flags_of !== undefined) {
 		return {

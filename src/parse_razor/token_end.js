@@ -5,5 +5,5 @@ import csharp_token from "./csharp_token/index.js"
  * @returns {number}
  */
 export default function(ctx, index) {
-	return csharp_token(ctx.text, index)?.end ?? index
+	return /** @type {import("../../private.js").RazorToken} */(csharp_token(ctx.text, index))/**/.end
 }

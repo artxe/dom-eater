@@ -34,7 +34,9 @@ export default function(text, errors, start, bracket) {
 			value: true
 		}
 		const equals_sign_index = text.slice(start + name_index).search(stop_space_regex)
-		if (equals_sign_index < 0 || text[start + name_index + equals_sign_index] != "=") return node
+		if (equals_sign_index < 0 || text[start + name_index + equals_sign_index] != "=") {
+			return node
+		}
 		const value_index = text.slice(
 			start + name_index + equals_sign_index + 1
 		).search(stop_space_regex) + 1

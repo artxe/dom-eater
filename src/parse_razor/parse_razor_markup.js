@@ -44,18 +44,28 @@ function fill_texts(ctx, nodes) {
 	const pending = [ ...nodes ]
 	for (let node = pending.pop(); node; node = pending.pop()) {
 		if (node.type == "Attribute") {
-			if (node.value !== true) pending.push(node.value)
+			if (node.value !== true) {
+				pending.push(node.value)
+			}
 		} else if (node.type == "Element") {
 			const body = ctx.bodies.get(node)
-			if (body) node.children = fill_text(node.children, body[0], body[1])
-			for (const attribute of node.attributes) pending.push(attribute)
-			for (const child of node.children) pending.push(child)
+			if (body) {
+				node.children = fill_text(node.children, body[0], body[1])
+			}
+			for (const attribute of node.attributes) {
+				pending.push(attribute)
+			}
+			for (const child of node.children) {
+				pending.push(child)
+			}
 		} else if (node.type == "Script") {
-			if ("elements" in node) {
-				for (const element of node.elements) pending.push(element)
+			for (const element of /** @type {import("../../public.js").Script & { subType: "razor" }} */(node)/**/.elements) {
+				pending.push(element)
 			}
 		} else if (node.type == "String") {
-			for (const script of node.scripts) pending.push(script)
+			for (const script of node.scripts) {
+				pending.push(script)
+			}
 		}
 	}
 }
@@ -81,6 +91,7 @@ export default function(text, include_text, component) {
 			in_template: false,
 			nested: false,
 			null_generate: false,
+			null_generate_dirty: false,
 			script: undefined,
 			single_line: false,
 			statement_ends: new Set(),
@@ -92,10 +103,14 @@ export default function(text, include_text, component) {
 			text.length
 		)
 		fill_texts(ctx, ast)
-		if (include_text) set_text(text, ast)
+		if (include_text) {
+			set_text(text, ast)
+		}
 		return { ast, errors }
 	} catch (error) {
-		if (!(error instanceof RangeError)) throw error
+		if (!(error instanceof RangeError)) {
+			throw error
+		}
 		errors.push(
 			create_ast_syntax_error(
 				"The input is nested too deeply.",

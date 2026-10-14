@@ -17,10 +17,14 @@ function raw_end(text, index) {
 		i = quote_end
 		for (;;) {
 			const char = text[i]
-			if (char === undefined || is_newline(char)) return i
+			if (char === undefined || is_newline(char)) {
+				return i
+			}
 			if (char == "\"") {
 				const run_end = skip_run(text, i, "\"")
-				if (run_end - i >= quotes) return run_end
+				if (run_end - i >= quotes) {
+					return run_end
+				}
 				i = run_end
 			} else {
 				i++
@@ -30,15 +34,23 @@ function raw_end(text, index) {
 	for (;;) {
 		i = skip_whitespace(text, newline_end(text, i))
 		const run_end = skip_run(text, i, "\"")
-		if (run_end - i >= quotes) return run_end
+		if (run_end - i >= quotes) {
+			return run_end
+		}
 		i = run_end
 		for (;;) {
 			const char = text[i]
-			if (char === undefined) return i
-			if (is_newline(char)) break
+			if (char === undefined) {
+				return i
+			}
+			if (is_newline(char)) {
+				break
+			}
 			if (char == "\"") {
 				const content_run_end = skip_run(text, i, "\"")
-				if (content_run_end - i >= quotes) return content_run_end
+				if (content_run_end - i >= quotes) {
+					return content_run_end
+				}
 				i = content_run_end
 			} else {
 				i++
@@ -52,7 +64,9 @@ function raw_end(text, index) {
  * @returns {number}
  */
 export default function(text, index) {
-	if (text.startsWith("\"\"\"", index)) return utf8_suffix_end(text, raw_end(text, index))
+	if (text.startsWith("\"\"\"", index)) {
+		return utf8_suffix_end(text, raw_end(text, index))
+	}
 	const quote = text[index]
 	let i = index + 1
 	for (;;) {

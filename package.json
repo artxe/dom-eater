@@ -5,18 +5,18 @@
 	},
 	"description": "Fast, error-tolerant AST parser for markup in HTML, JSX/TSX, Pug and Razor templates and JavaScript/TypeScript",
 	"devDependencies": {
-		"@types/node": "^26.6.2",
-		"@typescript-eslint/parser": "^8.70.0",
+		"@types/node": "^26.6.5",
+		"@typescript-eslint/parser": "^8.71.2",
 		"@typescript/native": "npm:typescript@^7.0.2",
-		"@vitest/coverage-v8": "^5.0.1",
-		"eslint": "^10.11.0",
-		"eslint-plugin-lube": "^0.6.0",
+		"@vitest/coverage-v8": "^5.0.4",
+		"eslint": "^10.12.0",
+		"eslint-plugin-lube": "^0.8.0",
 		"parse5": "^8.0.1",
 		"pug-lexer": "^5.0.1",
 		"pug-parser": "^6.0.0",
 		"pug-strip-comments": "^2.0.0",
 		"typescript": "npm:@typescript/typescript6@^6.0.2",
-		"vitest": "^5.0.1"
+		"vitest": "^5.0.4"
 	},
 	"engines": { "node": ">=14" },
 	"exports": {
@@ -77,5 +77,5 @@
 	"typesVersions": {
 		"*": { "*": [ "types/index.d.ts" ] }
 	},
-	"version": "1.0.0"
+	"version": "1.0.1"
 }

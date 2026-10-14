@@ -13,12 +13,16 @@ describe(
 			try {
 				run()
 			} catch (error) {
-				for (const name of changed) delete process.env[name]
+				for (const name of changed) {
+					delete process.env[name]
+				}
 				changed.length = 0
 				const reported = /** @type {{ actual?: { first?: string[] } }} */(error)/**/.actual
 				return (reported?.first ?? []).join("\n")
 			}
-			for (const name of changed) delete process.env[name]
+			for (const name of changed) {
+				delete process.env[name]
+			}
 			changed.length = 0
 			return assert.fail("No failure was reported")
 		}
@@ -37,7 +41,9 @@ describe(
 				set("SIM_SEEDS", "1")
 				set("SIM_BUDGET", "10000")
 				check_seeds("quick", 1, () => "<p>", () => [])
-				for (const name of changed) delete process.env[name]
+				for (const name of changed) {
+					delete process.env[name]
+				}
 				changed.length = 0
 			}
 		)
@@ -53,7 +59,7 @@ describe(
 						() => "<p>",
 						() => {
 							const until = Date.now() + 40
-							while (Date.now() < until);
+							while (Date.now() < until) { }
 							return []
 						}
 					)
@@ -79,7 +85,9 @@ describe(
 				assert.deepEqual(sim_seeds("html", 3), [ 77 ])
 				set("SIM_MODE", "other")
 				assert.deepEqual(sim_seeds("html", 3), [])
-				for (const name of changed) delete process.env[name]
+				for (const name of changed) {
+					delete process.env[name]
+				}
 				changed.length = 0
 			}
 		)
@@ -94,11 +102,13 @@ describe(
 					() => "<p>",
 					() => {
 						const until = Date.now() + 30
-						while (Date.now() < until);
+						while (Date.now() < until) { }
 						return []
 					}
 				)
-				for (const name of changed) delete process.env[name]
+				for (const name of changed) {
+					delete process.env[name]
+				}
 				changed.length = 0
 			}
 		)

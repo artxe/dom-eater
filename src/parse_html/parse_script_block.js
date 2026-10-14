@@ -54,7 +54,9 @@ function parse_script_block(text, errors, start, bracket) {
 		unclosed_starts.starts.clear()
 		unclosed_starts.text = text
 	}
-	if (unclosed_starts.starts.has(start)) return unclosed_block(text, errors, start, [])
+	if (unclosed_starts.starts.has(start)) {
+		return unclosed_block(text, errors, start, [])
+	}
 	let child_pre_index = start + 1
 	const state = create_scan_state(bracket)
 	svelte_tag_regex.lastIndex = child_pre_index
@@ -69,7 +71,9 @@ function parse_script_block(text, errors, start, bracket) {
 	const strings = []
 	for (;;) {
 		const child_index = text.slice(child_pre_index).search(stop_script_block_regex)
-		if (child_index < 0) break
+		if (child_index < 0) {
+			break
+		}
 		const index = child_pre_index + child_index
 		if (text[index] == "}") {
 			return {

@@ -23,8 +23,12 @@ const literal_end_chars = "\"'`]"
 function is_namespace_name(text, end, state) {
 	let i = end
 	for (;;) {
-		while (identifier_part_regex.test(text[i] ?? "")) i--
-		if (text[i] != ".") break
+		while (identifier_part_regex.test(text[i] ?? "")) {
+			i--
+		}
+		if (text[i] != ".") {
+			break
+		}
 		i--
 	}
 	const keyword = previous_word(
@@ -44,7 +48,10 @@ function word_before_string(text, end, state) {
 		text,
 		previous_index(
 			text,
-			text.lastIndexOf(text[end] ?? "", end - 1),
+			text.lastIndexOf(
+				/** @type {string} */(text[end])/**/,
+				end - 1
+			),
 			state
 		)
 	)
@@ -130,7 +137,7 @@ export default function(text, index, state) {
 				|| char == ":" && state.colons.get(i) == true
 				|| (char == "\"" || char == "'") && word_before_string(text, i, state) == "module"
 				|| identifier_part_regex.test(char) && is_namespace_name(text, i, state)
-				|| (literal_end_chars.includes(char) || char == "/" && state.openings.has(i + 1))
+				|| (literal_end_chars.includes(char) || identifier_part_regex.test(char) || char == "/" && state.openings.has(i + 1))
 					&& line_terminator_regex.test(text.slice(i + 1, index))
 		bracket.expression_after = block
 		if (!block) {

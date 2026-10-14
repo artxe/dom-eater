@@ -19,6 +19,8 @@ import parse_razor_markup from "./parse_razor_markup.js"
  * if (loop?.type == "Script" && loop.subType == "razor") loop.elements.map(element => element.name) // [ "li" ]
  */
 export default function(text, include_text) {
-	if (typeof text != "string") return not_string_result()
+	if (typeof text != "string") {
+		return not_string_result()
+	}
 	return parse_razor_markup(text, include_text, false)
 }

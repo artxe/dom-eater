@@ -1,4 +1,3 @@
-import add_error from "./add_error.js"
 import balance_from from "./balance_from.js"
 import csharp_token from "./csharp_token/index.js"
 /**
@@ -16,12 +15,6 @@ export default function(ctx, index, options) {
 			: token.kind == "{"
 				? "}"
 				: ">"
-	if (token.end >= ctx.text.length && !options.no_error) add_error(
-		ctx,
-		`Expected "${right}".`,
-		index,
-		token.end
-	)
 	return balance_from(
 		ctx,
 		token.end,

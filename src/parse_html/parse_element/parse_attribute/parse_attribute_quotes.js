@@ -41,7 +41,9 @@ export default function(text, errors, start) {
 				let close = -1
 				if (!missing.includes(tag) && (tag == "%" || php_open_regex.test(text))) {
 					close = text.indexOf(`${tag}>`, index + 2)
-					if (close < 0) missing += tag
+					if (close < 0) {
+						missing += tag
+					}
 				}
 				child_pre_index = close < 0
 					? index + 1

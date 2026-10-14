@@ -46,7 +46,6 @@ const mixin_block_regex = /block/y
 const mixin_regex = /mixin +([-\w]+)(?: *\((.*)\))? */y
 const path_regex = / ([^\n]+)/y
 const prepend_regex = /(?:block +)?prepend +([^\n]+)/y
-const slash_regex = /\//y
 const tag_regex = /\w(?:[-:\w]*\w)?/y
 const when_keyword_regex = /when\b/y
 const when_regex = /when +([^:\n]+)/y
@@ -97,8 +96,12 @@ function add_text(lexer, type, start, end) {
 				? value
 				: value.slice(0, close_index)
 		}
-		if (allowed && open_index != -1 && open_index < from) open_index = search.indexOf("#[", from)
-		if (allowed && escaped_index != -1 && escaped_index < from) escaped_index = search.indexOf("\\#[", from)
+		if (allowed && open_index != -1 && open_index < from) {
+			open_index = search.indexOf("#[", from)
+		}
+		if (allowed && escaped_index != -1 && escaped_index < from) {
+			escaped_index = search.indexOf("\\#[", from)
+		}
 		if (allowed && interpolation_index != -1 && interpolation_index < from) {
 			interpolation_index = string_interpolation_index(lexer, search, from)
 		}
@@ -134,7 +137,9 @@ function add_text(lexer, type, start, end) {
 				lexer.base + start + open + 2,
 				lexer
 			)
-			while (!child.ended) advance(child)
+			while (!child.ended) {
+				advance(child)
+			}
 			const child_end = open + 2 + child.index
 			if (!child.closed) {
 				add_error(
@@ -155,12 +160,14 @@ function add_text(lexer, type, start, end) {
 			from = child_end
 			text_from = child_end
 		} else if (close < open && close < escaped && close < string_interpolation) {
-			if (close > text_from) push_token(
-				lexer,
-				type,
-				start + text_from,
-				start + close
-			)
+			if (close > text_from) {
+				push_token(
+					lexer,
+					type,
+					start + text_from,
+					start + close
+				)
+			}
 			lexer.closed = true
 			lexer.ended = true
 			lexer.index = start + close + 1
@@ -170,12 +177,14 @@ function add_text(lexer, type, start, end) {
 				from = string_interpolation + 3
 				continue
 			}
-			if (string_interpolation > text_from) push_token(
-				lexer,
-				type,
-				start + text_from,
-				start + string_interpolation
-			)
+			if (string_interpolation > text_from) {
+				push_token(
+					lexer,
+					type,
+					start + text_from,
+					start + string_interpolation
+				)
+			}
 			const range = parse_until(
 				lexer.src,
 				start + string_interpolation + 2,
@@ -207,7 +216,9 @@ function add_text(lexer, type, start, end) {
 				code_end
 			)
 			token.buffer = true
-			if (code_end + 1 >= end) return
+			if (code_end + 1 >= end) {
+				return
+			}
 			from = code_end + 1 - start
 			text_from = from
 		} else {
@@ -221,7 +232,9 @@ function add_text(lexer, type, start, end) {
  * @returns {boolean}
  */
 function advance(lexer) {
-	if (eos(lexer)) return true
+	if (eos(lexer)) {
+		return true
+	}
 	switch (lexer.src[lexer.index]) {
 	case "\n":
 		return blank(lexer) || indent(lexer)
@@ -294,13 +307,19 @@ function attribute(lexer, start, end) {
 	let i = start
 	while (i < end && attribute_whitespace.includes(
 		/** @type {string} */(src[i])/**/
-	)) i++
-	if (i == end) return end
+	)) {
+		i++
+	}
+	if (i == end) {
+		return end
+	}
 	const key_start = i
 	const quote = src[i] == "'" || src[i] == "\""
 		? /** @type {string} */(src[i])/**/
 		: ""
-	if (quote) i++
+	if (quote) {
+		i++
+	}
 	const name_start = i
 	let name_end = -1
 	for (; i < end; i++) {
@@ -315,7 +334,9 @@ function attribute(lexer, start, end) {
 			break
 		}
 	}
-	if (name_end < 0) name_end = i
+	if (name_end < 0) {
+		name_end = i
+	}
 	const key_end = i
 	const value = attribute_value(lexer, key_end, end)
 	const token = push_token(
@@ -337,8 +358,12 @@ function attribute(lexer, start, end) {
 	i = value.remaining
 	while (i < end && attribute_whitespace.includes(
 		/** @type {string} */(src[i])/**/
-	)) i++
-	if (i < end && src[i] == ",") i++
+	)) {
+		i++
+	}
+	if (i < end && src[i] == ",") {
+		i++
+	}
 	return i
 }
 /**
@@ -352,7 +377,9 @@ function attribute_value(lexer, start, end) {
 	let i = start
 	while (i < end && attribute_whitespace.includes(
 		/** @type {string} */(src[i])/**/
-	)) i++
+	)) {
+		i++
+	}
 	if (i == end) {
 		return {
 			equals_end: -1,
@@ -400,7 +427,9 @@ function attribute_value(lexer, start, end) {
 	const equals_end = i
 	while (i < end && attribute_whitespace.includes(
 		/** @type {string} */(src[i])/**/
-	)) i++
+	)) {
+		i++
+	}
 	const value_start = i
 	const state = create_char_state()
 	for (; i < end; i++) {
@@ -413,13 +442,19 @@ function attribute_value(lexer, start, end) {
 					const next = /** @type {string} */(src[x])/**/
 					if (!attribute_whitespace.includes(next)) {
 						const continues = is_punctuator(next) && next != ":" && !src.startsWith("...", x)
-						if (!continues && is_expression_end(state)) done = true
+						if (!continues && is_expression_end(state)) {
+							done = true
+						}
 						break
 					}
 				}
-				if (done || x == end) break
+				if (done || x == end) {
+					break
+				}
 			}
-			if (char == "," && is_expression_end(state)) break
+			if (char == "," && is_expression_end(state)) {
+				break
+			}
 		}
 		parse_char(state, char)
 	}
@@ -473,7 +508,9 @@ function attributes_block(lexer) {
  * @returns {boolean}
  */
 function attrs(lexer) {
-	if (lexer.src[lexer.index] != "(") return false
+	if (lexer.src[lexer.index] != "(") {
+		return false
+	}
 	const start = lexer.index
 	const close = bracket_expression(lexer, 0)
 	push_token(
@@ -483,7 +520,9 @@ function attrs(lexer) {
 		start + 1
 	)
 	lexer.index = Math.min(close + 1, lexer.src.length)
-	for (let i = start + 1; i < close;) i = attribute(lexer, i, close)
+	for (let i = start + 1; i < close;) {
+		i = attribute(lexer, i, close)
+	}
 	push_token(
 		lexer,
 		"end-attributes",
@@ -498,7 +537,9 @@ function attrs(lexer) {
  */
 function blank(lexer) {
 	const captures = match(lexer, blank_regex)
-	if (!captures) return false
+	if (!captures) {
+		return false
+	}
 	lexer.index += captures[0].length - 1
 	return true
 }
@@ -508,7 +549,9 @@ function blank(lexer) {
  */
 function block_code(lexer) {
 	const result = scan_end_of_line(lexer, /-/y)
-	if (!result) return false
+	if (!result) {
+		return false
+	}
 	push_token(
 		lexer,
 		"blockcode",
@@ -538,7 +581,9 @@ function bracket_expression(lexer, skip) {
 		close
 	)
 	mismatch_errors(lexer, range.mismatches)
-	if (range.end >= 0) return range.end
+	if (range.end >= 0) {
+		return range.end
+	}
 	add_error(
 		lexer,
 		`The input ended before the closing "${close}".`,
@@ -553,7 +598,9 @@ function bracket_expression(lexer, skip) {
  */
 function call(lexer) {
 	const captures = match(lexer, call_regex)
-	if (!captures) return false
+	if (!captures) {
+		return false
+	}
 	const start = lexer.index
 	let name = ""
 	if (captures[3] === undefined) {
@@ -617,7 +664,9 @@ function case_keyword(lexer) {
 		set_code(lexer, token, range[0], range[1])
 		return true
 	}
-	if (!match(lexer, case_keyword_regex)) return false
+	if (!match(lexer, case_keyword_regex)) {
+		return false
+	}
 	add_error(
 		lexer,
 		"\"case\" is missing an expression.",
@@ -654,7 +703,6 @@ function class_name(lexer) {
 		push_literal(lexer, "class", digits[0].length)
 		return true
 	}
-	if (lexer.src[lexer.index] != ".") return false
 	const length = invalid_name_length(lexer)
 	add_error(
 		lexer,
@@ -672,7 +720,9 @@ function class_name(lexer) {
  */
 function code(lexer) {
 	const captures = match(lexer, code_regex)
-	if (!captures) return false
+	if (!captures) {
+		return false
+	}
 	const flags = /** @type {string} */(captures[1])/**/
 	const code_start = lexer.index + captures[0].length
 	const line_end = find_line_end(lexer, code_start)
@@ -703,7 +753,9 @@ function code(lexer) {
  */
 function colon(lexer) {
 	const captures = match(lexer, colon_regex)
-	if (!captures) return false
+	if (!captures) {
+		return false
+	}
 	push_token(
 		lexer,
 		":",
@@ -719,7 +771,9 @@ function colon(lexer) {
  */
 function comment(lexer) {
 	const captures = match(lexer, comment_regex)
-	if (!captures) return false
+	if (!captures) {
+		return false
+	}
 	const token = push_token(
 		lexer,
 		"comment",
@@ -738,7 +792,9 @@ function comment(lexer) {
  */
 function conditional(lexer) {
 	const captures = match(lexer, conditional_regex)
-	if (!captures) return false
+	if (!captures) {
+		return false
+	}
 	const keyword = /** @type {string} */(captures[1])/**/
 	const range = group_range(
 		captures,
@@ -827,7 +883,9 @@ function default_keyword(lexer) {
 		)
 		return true
 	}
-	if (!match(lexer, default_keyword_regex)) return false
+	if (!match(lexer, default_keyword_regex)) {
+		return false
+	}
 	add_error(
 		lexer,
 		"\"default\" should not have an expression.",
@@ -849,7 +907,9 @@ function default_keyword(lexer) {
  */
 function doctype(lexer) {
 	const result = scan_end_of_line(lexer, doctype_regex)
-	if (!result) return false
+	if (!result) {
+		return false
+	}
 	push_token(
 		lexer,
 		"doctype",
@@ -864,7 +924,9 @@ function doctype(lexer) {
  */
 function dot(lexer) {
 	const result = scan_end_of_line(lexer, dot_regex)
-	if (!result) return false
+	if (!result) {
+		return false
+	}
 	push_token(
 		lexer,
 		"dot",
@@ -985,7 +1047,9 @@ function each_of(lexer) {
  * @returns {boolean}
  */
 function end_interpolation(lexer) {
-	if (!lexer.interpolated || lexer.src[lexer.index] != "]") return false
+	if (!lexer.interpolated || lexer.src[lexer.index] != "]") {
+		return false
+	}
 	lexer.index++
 	lexer.closed = true
 	lexer.ended = true
@@ -996,15 +1060,21 @@ function end_interpolation(lexer) {
  * @returns {boolean}
  */
 function eos(lexer) {
-	if (lexer.index < lexer.src.length) return false
+	if (lexer.index < lexer.src.length) {
+		return false
+	}
 	lexer.ended = true
-	if (lexer.interpolated) return true
-	for (let i = 0; lexer.indent_stack[i]; i++) push_token(
-		lexer,
-		"outdent",
-		lexer.index,
-		lexer.index
-	)
+	if (lexer.interpolated) {
+		return true
+	}
+	for (let i = 0; lexer.indent_stack[i]; i++) {
+		push_token(
+			lexer,
+			"outdent",
+			lexer.index,
+			lexer.index
+		)
+	}
 	push_token(
 		lexer,
 		"eos",
@@ -1027,16 +1097,20 @@ function extends_keyword(lexer) {
 			lexer.index + captures[0].length
 		)
 		lexer.index += captures[0].length
-		if (!path(lexer)) add_error(
-			lexer,
-			"\"extends\" is missing a path.",
-			lexer.index,
-			lexer.index
-		)
+		if (!path(lexer)) {
+			add_error(
+				lexer,
+				"\"extends\" is missing a path.",
+				lexer.index,
+				lexer.index
+			)
+		}
 		return true
 	}
 	const malformed = match(lexer, extends_keyword_regex)
-	if (!malformed) return false
+	if (!malformed) {
+		return false
+	}
 	add_error(
 		lexer,
 		"\"extends\" is malformed.",
@@ -1076,7 +1150,9 @@ function fail(lexer) {
  */
 function filter(lexer, in_include) {
 	const captures = match(lexer, filter_regex)
-	if (!captures) return false
+	if (!captures) {
+		return false
+	}
 	const token = push_token(
 		lexer,
 		"filter",
@@ -1098,7 +1174,9 @@ function filter(lexer, in_include) {
  * @returns {number}
  */
 function find_line_end(lexer, index) {
-	if (lexer.interpolated) return lexer.src.length
+	if (lexer.interpolated) {
+		return lexer.src.length
+	}
 	const line_end = lexer.src.indexOf("\n", index)
 	return line_end < 0
 		? lexer.src.length
@@ -1126,7 +1204,6 @@ function id(lexer) {
 		push_literal(lexer, "id", captures[0].length)
 		return true
 	}
-	if (lexer.src[lexer.index] != "#") return false
 	const length = invalid_name_length(lexer)
 	add_error(
 		lexer,
@@ -1151,7 +1228,7 @@ function include(lexer) {
 			lexer.index + 7
 		)
 		lexer.index += 7
-		while (filter(lexer, true));
+		while (filter(lexer, true)) { }
 		if (!path(lexer)) {
 			if (match(lexer, include_rest_regex)) {
 				fail(lexer)
@@ -1166,7 +1243,9 @@ function include(lexer) {
 		}
 		return true
 	}
-	if (!match(lexer, include_keyword_regex)) return false
+	if (!match(lexer, include_keyword_regex)) {
+		return false
+	}
 	add_error(
 		lexer,
 		"\"include\" is malformed.",
@@ -1187,24 +1266,21 @@ function include(lexer) {
  * @returns {boolean}
  */
 function indent(lexer) {
-	const captures = scan_indentation(lexer)
-	if (!captures) return false
+	const captures = /** @type {RegExpExecArray} */(scan_indentation(lexer))/**/
 	const line_start = lexer.index + 1
 	const indents = /** @type {string} */(captures[1])/**/.length
 	lexer.index += indents + 1
 	if (lexer.src[lexer.index] == " " || lexer.src[lexer.index] == "\t") {
 		const start = lexer.index
-		while (lexer.src[lexer.index] == " " || lexer.src[lexer.index] == "\t") lexer.index++
+		while (lexer.src[lexer.index] == " " || lexer.src[lexer.index] == "\t") {
+			lexer.index++
+		}
 		add_error(
 			lexer,
 			"Invalid indentation: use tabs or spaces, not both.",
 			line_start,
 			Math.max(start, lexer.index)
 		)
-	}
-	if (lexer.src[lexer.index] == "\n") {
-		lexer.interpolation_allowed = true
-		return true
 	}
 	const stack = lexer.indent_stack
 	if (indents < /** @type {number} */(stack[0])/**/) {
@@ -1225,12 +1301,14 @@ function indent(lexer) {
 			count--
 			stack.unshift(indents)
 		}
-		for (; count > 0; count--) push_token(
-			lexer,
-			"outdent",
-			lexer.index,
-			lexer.index
-		)
+		for (; count > 0; count--) {
+			push_token(
+				lexer,
+				"outdent",
+				lexer.index,
+				lexer.index
+			)
+		}
 		if (stack[0] == indents && lexer.tokens[lexer.tokens.length - 1]?.type != "outdent") {
 			push_token(
 				lexer,
@@ -1263,7 +1341,9 @@ function indent(lexer) {
  * @returns {boolean}
  */
 function interpolation(lexer) {
-	if (!lexer.src.startsWith("#{", lexer.index)) return false
+	if (!lexer.src.startsWith("#{", lexer.index)) {
+		return false
+	}
 	const close = bracket_expression(lexer, 1)
 	const token = push_token(
 		lexer,
@@ -1313,7 +1393,9 @@ function mismatch_errors(lexer, mismatches) {
  */
 function mixin(lexer) {
 	const captures = match(lexer, mixin_regex)
-	if (!captures) return false
+	if (!captures) {
+		return false
+	}
 	const token = push_token(
 		lexer,
 		"mixin",
@@ -1343,7 +1425,9 @@ function mixin(lexer) {
  */
 function mixin_block(lexer) {
 	const result = scan_end_of_line(lexer, mixin_block_regex)
-	if (!result) return false
+	if (!result) {
+		return false
+	}
 	push_token(
 		lexer,
 		"mixin-block",
@@ -1360,19 +1444,27 @@ function mixin_block(lexer) {
  */
 function named_block(lexer, regex, mode) {
 	const captures = match(lexer, regex)
-	if (!captures) return false
+	if (!captures) {
+		return false
+	}
 	let name = /** @type {string} */(captures[1])/**/.trim()
 	const comment_index = name.indexOf("//")
 	const comment_length = comment_index < 0
 		? 0
 		: name.length - comment_index
-	if (comment_index >= 0) name = name.slice(0, comment_index).trim()
-	if (!name) return false
+	if (comment_index >= 0) {
+		name = name.slice(0, comment_index).trim()
+	}
+	if (!name) {
+		return false
+	}
 	const consumed = captures[0].length - comment_length
 	let length = consumed
 	while (attribute_whitespace.includes(
-		lexer.src[lexer.index + length - 1] ?? ""
-	)) length--
+		/** @type {string} */(lexer.src[lexer.index + length - 1])/**/
+	)) {
+		length--
+	}
 	const token = push_token(
 		lexer,
 		"block",
@@ -1389,10 +1481,14 @@ function named_block(lexer, regex, mode) {
  */
 function path(lexer) {
 	const result = scan_end_of_line(lexer, path_regex)
-	if (!result) return false
+	if (!result) {
+		return false
+	}
 	const range = group_range(result.captures, 1, result.end)
 	const value = /** @type {string} */(result.captures[1])/**/
-	if (!value.trim()) return false
+	if (!value.trim()) {
+		return false
+	}
 	push_token(lexer, "path", range[0], range[1])
 	return true
 }
@@ -1401,13 +1497,15 @@ function path(lexer) {
  * @returns {boolean}
  */
 function pipeless_text(lexer) {
-	while (blank(lexer));
+	while (blank(lexer)) { }
 	const captures = scan_indentation(lexer)
 	const stack_indents = /** @type {number} */(lexer.indent_stack[0])/**/
 	let block_indents = captures
 		? /** @type {string} */(captures[1])/**/.length
 		: 0
-	if (block_indents <= stack_indents) return false
+	if (block_indents <= stack_indents) {
+		return false
+	}
 	const src = lexer.src
 	const regex = /** @type {RegExp} */(lexer.indent_regex)/**/
 	/** @type {[ number, number, number ][]} */
@@ -1419,7 +1517,9 @@ function pipeless_text(lexer) {
 		const line_captures = /** @type {RegExpExecArray} */(regex.exec(src))/**/
 		const line_indents = /** @type {string} */(line_captures[1])/**/.length
 		if (line_indents < block_indents && src.slice(line_start, line_end).trim() != "") {
-			if (line_indents <= stack_indents) break
+			if (line_indents <= stack_indents) {
+				break
+			}
 			block_indents = line_indents
 		}
 		lines.push(
@@ -1433,12 +1533,12 @@ function pipeless_text(lexer) {
 		lexer.index,
 		lexer.index
 	)
-	lexer.index = lines.length > 0
-		? /** @type {[ number, number, number ]} */(lines[lines.length - 1])/**/[1]
-		: lexer.index
+	lexer.index = /** @type {[ number, number, number ]} */(lines[lines.length - 1])/**/[1]
 	while (lexer.index == src.length && lines.length > 0) {
 		const last = /** @type {[ number, number, number ]} */(lines[lines.length - 1])/**/
-		if (last[1] > last[0] + block_indents) break
+		if (last[1] > last[0] + block_indents) {
+			break
+		}
 		lines.pop()
 	}
 	lines.forEach(
@@ -1447,7 +1547,9 @@ function pipeless_text(lexer) {
 				line_start + block_indents,
 				line_end
 			)
-			if (i > 0) push_token(lexer, "newline", start, start)
+			if (i > 0) {
+				push_token(lexer, "newline", start, start)
+			}
 			add_text(lexer, "text", start, line_end)
 		}
 	)
@@ -1508,8 +1610,10 @@ function push_token(lexer, type, start, end) {
  */
 function scan_end_of_line(lexer, regex) {
 	const captures = match(lexer, regex)
-	if (!captures) return undefined
-	const start = lexer.index + (/^ */.exec(captures[0])?.[0].length ?? 0)
+	if (!captures) {
+		return undefined
+	}
+	const start = lexer.index + /** @type {RegExpExecArray} */(/^ */.exec(captures[0]))/**/[0].length
 	const end = lexer.index + captures[0].length
 	if (lexer.src[end] == ":") {
 		lexer.index = end
@@ -1517,9 +1621,13 @@ function scan_end_of_line(lexer, regex) {
 	}
 	end_of_line_regex.lastIndex = end
 	const rest = end_of_line_regex.exec(lexer.src)
-	if (!rest) return undefined
+	if (!rest) {
+		return undefined
+	}
 	lexer.index = end
-	while (lexer.src[lexer.index] == " " || lexer.src[lexer.index] == "\t") lexer.index++
+	while (lexer.src[lexer.index] == " " || lexer.src[lexer.index] == "\t") {
+		lexer.index++
+	}
 	return { captures, end, start }
 }
 /**
@@ -1527,14 +1635,18 @@ function scan_end_of_line(lexer, regex) {
  * @returns {RegExpExecArray | null}
  */
 function scan_indentation(lexer) {
-	if (lexer.indent_regex) return match(lexer, lexer.indent_regex)
+	if (lexer.indent_regex) {
+		return match(lexer, lexer.indent_regex)
+	}
 	let captures = match(lexer, indent_tabs_regex)
 	let regex = indent_tabs_regex
 	if (captures && !captures[1]) {
 		captures = match(lexer, indent_spaces_regex)
 		regex = indent_spaces_regex
 	}
-	if (captures && captures[1]) lexer.indent_regex = regex
+	if (captures && captures[1]) {
+		lexer.indent_regex = regex
+	}
 	return captures
 }
 /**
@@ -1558,7 +1670,9 @@ function skip_js_whitespace(src, start, end) {
 	let index = start
 	while (index < end && is_js_whitespace(
 		/** @type {string} */(src[index])/**/
-	)) index++
+	)) {
+		index++
+	}
 	return index
 }
 /**
@@ -1566,7 +1680,6 @@ function skip_js_whitespace(src, start, end) {
  * @returns {boolean}
  */
 function slash(lexer) {
-	if (!match(lexer, slash_regex)) return false
 	push_token(
 		lexer,
 		"slash",
@@ -1591,7 +1704,9 @@ function string_interpolation_index(lexer, value, from) {
 		: -1
 	for (let i = value.indexOf("{", from + 1); i >= 0; i = value.indexOf("{", i + 1)) {
 		const marker = value[i - 1]
-		if (i <= blocked || marker != "#" && marker != "!") continue
+		if (i <= blocked || marker != "#" && marker != "!") {
+			continue
+		}
 		return i - 2 >= from && value[i - 2] == "\\"
 			? i - 2
 			: i - 1
@@ -1604,7 +1719,9 @@ function string_interpolation_index(lexer, value, from) {
  */
 function tag(lexer) {
 	const captures = match(lexer, tag_regex)
-	if (!captures) return false
+	if (!captures) {
+		return false
+	}
 	const token = push_token(
 		lexer,
 		"tag",
@@ -1622,7 +1739,6 @@ function tag(lexer) {
 function text(lexer) {
 	const src = lexer.src
 	const start = lexer.index
-	if (src[start] != " " && src[start] != "|") return false
 	const line_end = find_line_end(lexer, start)
 	const value_start = src[start] == "|" && src[start + 1] == " " && start + 2 < line_end
 		? start + 2
@@ -1643,7 +1759,6 @@ function text(lexer) {
  * @returns {boolean}
  */
 function text_html(lexer) {
-	if (lexer.src[lexer.index] != "<") return false
 	const start = lexer.index
 	lexer.index = find_line_end(lexer, start)
 	add_text(
@@ -1664,7 +1779,9 @@ function trim_end(src, start, end) {
 	let index = end
 	while (index > start && is_js_whitespace(
 		/** @type {string} */(src[index - 1])/**/
-	)) index--
+	)) {
+		index--
+	}
 	return index
 }
 /**
@@ -1678,14 +1795,20 @@ function when_keyword(lexer) {
 		let code_end = range[1]
 		const state = create_char_state()
 		for (let parsed = range[0]; ;) {
-			for (; parsed < code_end; parsed++) parse_char(
-				state,
-				/** @type {string} */(lexer.src[parsed])/**/
-			)
-			if (state.stack.length == 0) break
+			for (; parsed < code_end; parsed++) {
+				parse_char(
+					state,
+					/** @type {string} */(lexer.src[parsed])/**/
+				)
+			}
+			if (state.stack.length == 0) {
+				break
+			}
 			when_rest_regex.lastIndex = lexer.index
 			const rest = when_rest_regex.exec(lexer.src)
-			if (!rest) break
+			if (!rest) {
+				break
+			}
 			code_end = lexer.index + rest[0].length
 			lexer.index = code_end
 		}
@@ -1698,7 +1821,9 @@ function when_keyword(lexer) {
 		set_code(lexer, token, range[0], code_end)
 		return true
 	}
-	if (!match(lexer, when_keyword_regex)) return false
+	if (!match(lexer, when_keyword_regex)) {
+		return false
+	}
 	add_error(
 		lexer,
 		"\"when\" is missing an expression.",
@@ -1736,7 +1861,9 @@ function while_keyword(lexer) {
 		lexer.index += captures[0].length
 		return true
 	}
-	if (!match(lexer, while_keyword_regex)) return false
+	if (!match(lexer, while_keyword_regex)) {
+		return false
+	}
 	add_error(
 		lexer,
 		"\"while\" is missing an expression.",
@@ -1758,7 +1885,9 @@ function while_keyword(lexer) {
  */
 function yield_keyword(lexer) {
 	const result = scan_end_of_line(lexer, yield_regex)
-	if (!result) return false
+	if (!result) {
+		return false
+	}
 	push_token(
 		lexer,
 		"yield",
@@ -1774,6 +1903,8 @@ function yield_keyword(lexer) {
  */
 export default function(src, errors) {
 	const lexer = create_lexer(src, 0, errors)
-	while (!lexer.ended) advance(lexer)
+	while (!lexer.ended) {
+		advance(lexer)
+	}
 	return lexer.tokens
 }

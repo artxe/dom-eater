@@ -47,9 +47,11 @@ export type PugCharState = {
 	operand_before: boolean
 	recent: string
 	recent_kind: number
+	regexp_closed: boolean
 	regexp_start: boolean
 	separated: boolean
 	stack: string[]
+	tail: PugCharState | undefined
 	ternaries: number
 	undo_ident: string
 	undo_ident_before: string
@@ -154,6 +156,7 @@ export type RazorContext = {
 	in_template: boolean
 	nested: boolean
 	null_generate: boolean
+	null_generate_dirty: boolean
 	script: RazorScript | undefined
 	single_line: boolean
 	statement_ends: Set<number>
@@ -178,7 +181,6 @@ export type RazorParserState =
 	"cdata"
 	| "code_transition"
 	| "double_transition"
-	| "eof"
 	| "markup_comment"
 	| "markup_text"
 	| "misc"

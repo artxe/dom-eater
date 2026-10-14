@@ -10,8 +10,11 @@ export default function(text, index) {
 	for (let i = index; i < text.length; i++) {
 		const char = text[i]
 		if (quote) {
-			if (char == "\\") i++
-			else if (char == quote) quote = undefined
+			if (char == "\\") {
+				i++
+			} else if (char == quote) {
+				quote = undefined
+			}
 		} else if (char == "\"" || char == "'" || char == "`") {
 			quote = char
 		} else if (char == "(") {

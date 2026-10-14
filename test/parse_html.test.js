@@ -19,7 +19,7 @@ import {
 	script_syntax_error_cases
 } from "./script_syntax_cases.js"
 import { parseHtml } from "dom-eater"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 const closes_rt = [ "rb", "rp", "rt" ]
 const closes_ruby = [ "rb", "rp", "rt", "rtc" ]
 const closes_table_cell = [ "caption", "colgroup", "td", "th" ]
@@ -210,6 +210,35 @@ describe(
 					}
 				)
 				it(
+					"keeps an ICU expression cut off after a < as text",
+					() => {
+						expect(html("{n, plural, =0 {none <")).toStrictEqual(
+							{
+								ast: [
+									text_node("{n, plural, =0 {none <")
+								],
+								errors: []
+							}
+						)
+					}
+				)
+				it.each(
+					[ "@let a = f(b;", "@let a = \"b;" ]
+				)(
+					"keeps markup after %j, whose semicolon is inside brackets or a string",
+					declaration => {
+						expect(html(`${declaration}<p></p>`)).toStrictEqual(
+							{
+								ast: [
+									text_node(declaration),
+									element_node("<p></p>", "p", "open")
+								],
+								errors: []
+							}
+						)
+					}
+				)
+				it(
 					"keeps markup after @let without = or a semicolon",
 					() => {
 						expect(
@@ -353,6 +382,15 @@ describe(
 								errors: []
 							}
 						)
+						expect(html("@if ((a) {b}")).toStrictEqual(
+							{
+								ast: [
+									text_node("@if ((a) "),
+									script_node("{b}", "block")
+								],
+								errors: []
+							}
+						)
 					}
 				)
 				it(
@@ -464,6 +502,73 @@ describe(
 					}
 				)
 				it(
+					"reports a tag cut off in the cases of an ICU expression",
+					() => {
+						expect(
+							html("{n, plural, =0 {<b title=\"}")
+						).toStrictEqual(
+							{
+								ast: [
+									text_node("{n, plural, =0 {"),
+									element_node(
+										"<b title=\"}",
+										"b",
+										"open",
+										[
+											attribute_node(
+												"title=\"}",
+												"title",
+												string_node("\"}", "double")
+											)
+										]
+									)
+								],
+								errors: [
+									{
+										end: 27,
+										message: "The double-quoted attribute value is not closed.",
+										start: 25
+									},
+									{
+										end: 27,
+										message: "The start tag is not closed.",
+										start: 16
+									},
+									{
+										end: 27,
+										message: "The \"b\" element is not closed.",
+										start: 16
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
+					"reports an interpolation cut off in the cases of an ICU expression as unclosed blocks",
+					() => {
+						expect(html("{n, plural, =0 {{{ a")).toStrictEqual(
+							{
+								ast: [
+									text_node("{n, plural, =0 {{{ a")
+								],
+								errors: [
+									{
+										end: 17,
+										message: "The {…} block is not closed.",
+										start: 16
+									},
+									{
+										end: 18,
+										message: "The {…} block is not closed.",
+										start: 17
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
 					"skips backtick strings in Angular block conditions",
 					() => {
 						expect(html("@if (`)`) {<i/>}")).toStrictEqual(
@@ -555,6 +660,33 @@ describe(
 						)
 					}
 				)
+				it(
+					"skips escaped quotes in interpolations in the cases of an ICU expression",
+					() => {
+						expect(
+							html(
+								"{n, plural, =0 {{{ \"\\\"}}\" }}} other {<i></i>}}"
+							)
+						).toStrictEqual(
+							{
+								ast: [
+									text_node("{n, plural, =0 {"),
+									script_node(
+										"{{ \"\\\"}}\" }}",
+										"block",
+										[
+											string_node("\"\\\"}}\"", "double")
+										]
+									),
+									text_node("} other {"),
+									element_node("<i></i>", "i", "open"),
+									text_node("}}")
+								],
+								errors: []
+							}
+						)
+					}
+				)
 			}
 		)
 		describe(
@@ -637,6 +769,36 @@ describe(
 								errors: [
 									{
 										end: 16,
+										message: "The {…} block is not closed.",
+										start: 10
+									}
+								]
+							}
+						)
+						expect(html("<a title='{\"x}'>y</a>")).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"<a title='{\"x}'>y</a>",
+										"a",
+										"open",
+										[
+											attribute_node(
+												"title='{\"x}'",
+												"title",
+												string_node(
+													"'{\"x}'",
+													"single",
+													[ script_node("{\"x}", "block") ]
+												)
+											)
+										],
+										[ text_node("y") ]
+									)
+								],
+								errors: [
+									{
+										end: 14,
 										message: "The {…} block is not closed.",
 										start: 10
 									}
@@ -1251,6 +1413,71 @@ describe(
 					}
 				)
 				it(
+					"keeps a raw block as text up to its own end tag or to the end of input",
+					() => {
+						const text = "{% raw %}{% endcomment %}<p>{% endraw %}"
+						expect(html(`${text}<i></i>`)).toStrictEqual(
+							{
+								ast: [
+									text_node(text),
+									element_node("<i></i>", "i", "open")
+								],
+								errors: []
+							}
+						)
+						expect(
+							html(
+								"{% raw %}<p>{% endverbatim %}<i></i>"
+							)
+						).toStrictEqual(
+							{
+								ast: [
+									text_node(
+										"{% raw %}<p>{% endverbatim %}<i></i>"
+									)
+								],
+								errors: []
+							}
+						)
+					}
+				)
+				it(
+					"keeps scanning blocks with unmatched parentheses and angle brackets",
+					() => {
+						expect(
+							html(
+								"{a) => \"s\"}{x = { b) { \"t\" } }}{c) class D {} \"u\"}{e > (f) => \"v\"}"
+							)
+						).toStrictEqual(
+							{
+								ast: [
+									script_node(
+										"{a) => \"s\"}",
+										"block",
+										[ string_node("\"s\"", "double") ]
+									),
+									script_node(
+										"{x = { b) { \"t\" } }}",
+										"block",
+										[ string_node("\"t\"", "double") ]
+									),
+									script_node(
+										"{c) class D {} \"u\"}",
+										"block",
+										[ string_node("\"u\"", "double") ]
+									),
+									script_node(
+										"{e > (f) => \"v\"}",
+										"block",
+										[ string_node("\"v\"", "double") ]
+									)
+								],
+								errors: []
+							}
+						)
+					}
+				)
+				it(
 					"keeps template comments and raw blocks as text",
 					() => {
 						const text = "{{!-- a {b} --}}{{! c' }}{# d' #}{% raw %}{{ e' }}{% endraw %}"
@@ -1270,6 +1497,12 @@ describe(
 								errors: []
 							}
 						)
+						expect(html("{{! open' <b>")).toStrictEqual(
+							{
+								ast: [ text_node("{{! open' <b>") ],
+								errors: []
+							}
+						)
 						expect(
 							html("<p>{#if a}{{!a}}{/if}</p>")
 						).toStrictEqual(
@@ -1286,6 +1519,20 @@ describe(
 											script_node("{/if}", "block")
 										]
 									)
+								],
+								errors: []
+							}
+						)
+					}
+				)
+				it(
+					"parses a {# that #} does not close as a Script block",
+					() => {
+						expect(html("{#a}<p></p>")).toStrictEqual(
+							{
+								ast: [
+									script_node("{#a}", "block"),
+									element_node("<p></p>", "p", "open")
 								],
 								errors: []
 							}
@@ -1349,6 +1596,28 @@ describe(
 										end: 14,
 										message: "The {…} block is not closed.",
 										start: 6
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
+					"reports a template comment cut off right after {{! as unclosed blocks",
+					() => {
+						expect(html("a {{!")).toStrictEqual(
+							{
+								ast: [ text_node("a {{!") ],
+								errors: [
+									{
+										end: 3,
+										message: "The {…} block is not closed.",
+										start: 2
+									},
+									{
+										end: 4,
+										message: "The {…} block is not closed.",
+										start: 3
 									}
 								]
 							}
@@ -2438,7 +2707,9 @@ describe(
 						)
 						expect(result.errors).toStrictEqual([])
 						let levels = 0
-						for (let node = result.ast[0]; node?.type == "Element"; node = node.children[0]) levels++
+						for (let node = result.ast[0]; node?.type == "Element"; node = node.children[0]) {
+							levels++
+						}
 						expect(levels).toBe(depth)
 					}
 				)
@@ -2534,6 +2805,36 @@ describe(
 					"reports input that is not a string instead of throwing",
 					() => {
 						check_non_string_input(parseHtml)
+					}
+				)
+				it(
+					"rethrows errors from element parsing other than a stack overflow",
+					() => {
+						const error = new TypeError("Injected.")
+						const exec = RegExp.prototype.exec
+						const spy = vi.spyOn(RegExp.prototype, "exec").mockImplementation(
+							/**
+							 * @this {RegExp}
+							 * @param {string} string
+							 * @returns {RegExpExecArray | null}
+							 */
+							function(string) {
+								if (this.sticky) {
+									throw error
+								}
+								return exec.call(this, string)
+							}
+						)
+						/** @type {unknown} */
+						let thrown
+						try {
+							parseHtml("<!DOCTYPE html>")
+						} catch (caught) {
+							thrown = caught
+						} finally {
+							spy.mockRestore()
+						}
+						expect(thrown).toBe(error)
 					}
 				)
 				it(
@@ -4141,6 +4442,26 @@ describe(
 										"open",
 										[],
 										[ text_node("x") ]
+									)
+								],
+								errors: []
+							}
+						)
+						expect(
+							html(
+								"<script>\n\t--> it's\n</script>"
+							)
+						).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"<script>\n\t--> it's\n</script>",
+										"script",
+										"open",
+										[],
+										[
+											script_node("\n\t--> it's\n", "content")
+										]
 									)
 								],
 								errors: []

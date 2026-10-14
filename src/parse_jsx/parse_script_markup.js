@@ -46,7 +46,9 @@ function scan(text, errors, ast_nodes, jsx, module) {
 		: 0
 	for (;;) {
 		const child_index = text.slice(start).search(stop_jsx_regex)
-		if (child_index < 0) break
+		if (child_index < 0) {
+			break
+		}
 		const index = start + child_index
 		if (text[index] == "<") {
 			const node = parse_tag_candidate(text, errors, index, state)
@@ -74,7 +76,9 @@ function scan(text, errors, ast_nodes, jsx, module) {
 				nested_bracket(text, index, false, state)
 			)
 			if (markup) {
-				for (const element of parse_markup_template(text, errors, node)) ast_nodes.push(element)
+				for (const element of parse_markup_template(text, errors, node)) {
+					ast_nodes.push(element)
+				}
 			}
 			record_literal(node, state)
 			start = node.end
@@ -105,9 +109,13 @@ export default function(text, include_text, jsx) {
 			ast_nodes = []
 			scan(text, errors, ast_nodes, jsx, false)
 		}
-		if (include_text) set_text(text, ast_nodes)
+		if (include_text) {
+			set_text(text, ast_nodes)
+		}
 	} catch (error) {
-		if (!(error instanceof RangeError)) throw error
+		if (!(error instanceof RangeError)) {
+			throw error
+		}
 		errors.push(
 			create_ast_syntax_error(
 				"The input is nested too deeply.",
@@ -115,7 +123,9 @@ export default function(text, include_text, jsx) {
 				text.length
 			)
 		)
-		if (include_text) set_text(text, ast_nodes)
+		if (include_text) {
+			set_text(text, ast_nodes)
+		}
 	}
 	return { ast: ast_nodes, errors }
 }

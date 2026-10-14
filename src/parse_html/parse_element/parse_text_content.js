@@ -32,7 +32,9 @@ export default function(text, errors, start, name) {
 				}
 			)
 		}
-		if (child_index < 0) break
+		if (child_index < 0) {
+			break
+		}
 		const node = parse_script_block(content, errors, index)
 		children.push(node)
 		child_pre_index = node.end

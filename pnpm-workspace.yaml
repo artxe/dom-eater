@@ -1,2 +1,7 @@
 minimumReleaseAgeExclude:
-  - eslint-plugin-lube@0.6.0
+  - async-lube
+  - data-lube
+  - datetime-lube
+  - dom-eater
+  - eslint-plugin-lube
+  - hangul-lube

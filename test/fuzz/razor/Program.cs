@@ -2,7 +2,8 @@ using System.Collections;
 using System.Reflection;
 using System.Text.Encodings.Web;
 using System.Text.Json;
-var relaxed = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+Console.InputEncoding = System.Text.Encoding.UTF8;
+var relaxed =new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
 var metadata = typeof(Program).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>().ToDictionary(a => a.Key, a => a.Value);
 string[] directories = { metadata["RazorTools"], metadata["RoslynBin"] };
 AppDomain.CurrentDomain.AssemblyResolve += (_, e) => {

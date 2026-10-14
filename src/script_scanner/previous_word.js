@@ -6,9 +6,17 @@ import member_dot_regex from "./member_dot_regex.js"
  * @returns {string}
  */
 export default function(text, end) {
-	if (end < 0 || !identifier_part_regex.test(text[end] ?? "")) return ""
+	if (end < 0 || !identifier_part_regex.test(
+		/** @type {string} */(text[end])/**/
+	)) {
+		return ""
+	}
 	let start = end
-	while (start > 0 && identifier_part_regex.test(text[start - 1] ?? "")) start--
+	while (start > 0 && identifier_part_regex.test(
+		/** @type {string} */(text[start - 1])/**/
+	)) {
+		start--
+	}
 	member_dot_regex.lastIndex = start - 1
 	return start > 0 && member_dot_regex.test(text)
 		? ""

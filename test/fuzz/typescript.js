@@ -113,7 +113,9 @@ const statements = [
  * @returns {string[]}
  */
 export function completion_problems(code, jsx, next) {
-	if (!jsx) return []
+	if (!jsx) {
+		return []
+	}
 	const source = parse_typescript(code, jsx)
 	/** @type {import("typescript").JsxAttribute[]} */
 	const attributes = []
@@ -122,11 +124,15 @@ export function completion_problems(code, jsx, next) {
 	 * @returns {void}
 	 */
 	function visit(node) {
-		if (ts.isJsxAttribute(node) && node.initializer && ts.isStringLiteral(node.initializer)) attributes.push(node)
+		if (ts.isJsxAttribute(node) && node.initializer && ts.isStringLiteral(node.initializer)) {
+			attributes.push(node)
+		}
 		ts.forEachChild(node, visit)
 	}
 	visit(source)
-	if (!attributes.length) return []
+	if (!attributes.length) {
+		return []
+	}
 	const attribute = pick(next, attributes)
 	const value = /** @type {import("typescript").StringLiteral} */(attribute.initializer)/**/
 	const value_start = value.getStart(source)
@@ -168,7 +174,9 @@ export function generated_program(seed) {
 		return template.replace(
 			/\b[ES]\b/g,
 			symbol => {
-				if (++depth > 25) return symbol == "E" ? "a" : ";"
+				if (++depth > 25) {
+					return symbol == "E" ? "a" : ";"
+				}
 				return expand(
 					pick(
 						next,
@@ -180,7 +188,9 @@ export function generated_program(seed) {
 	}
 	let code = ""
 	const count = 1 + Math.floor(next() * 4)
-	for (let i = 0; i < count; i++) code += expand(pick(next, statements)) + (next() < 0.5 ? "\n" : " ")
+	for (let i = 0; i < count; i++) {
+		code += expand(pick(next, statements)) + (next() < 0.5 ? "\n" : " ")
+	}
 	return code
 }
 /**
@@ -230,7 +240,9 @@ export function probed_programs(code, jsx, next) {
 	 */
 	function visit(node) {
 		if (ts.isBlock(node) || ts.isSourceFile(node) || ts.isModuleBlock(node)) {
-			for (const statement of node.statements) statement_starts.push(statement.getStart(source))
+			for (const statement of node.statements) {
+				statement_starts.push(statement.getStart(source))
+			}
 		}
 		const { parent } = node
 		if (
@@ -240,9 +252,11 @@ export function probed_programs(code, jsx, next) {
 				|| ts.isReturnStatement(parent)
 				|| ts.isConditionalExpression(parent)
 			)
-		) operands.push(
-			[ node.getStart(source), node.end ]
-		)
+		) {
+			operands.push(
+				[ node.getStart(source), node.end ]
+			)
+		}
 		ts.forEachChild(node, visit)
 	}
 	visit(source)
@@ -253,9 +267,11 @@ export function probed_programs(code, jsx, next) {
 		programs.push(
 			`${code.slice(0, at)}/'/.test(q);${code.slice(at)}`
 		)
-		if (jsx) programs.push(
-			`${code.slice(0, at)}<Q/>;${code.slice(at)}`
-		)
+		if (jsx) {
+			programs.push(
+				`${code.slice(0, at)}<Q/>;${code.slice(at)}`
+			)
+		}
 	}
 	for (let i = 0; i < 2 && operands.length; i++) {
 		const [ start, end ] = pick(next, operands)
@@ -273,14 +289,20 @@ export function probed_programs(code, jsx, next) {
  */
 function program_problems(code, jsx, next) {
 	const problems = typescript_problems(code, jsx)
-	if (!problems) return undefined
-	if (problems.length) return problems
+	if (!problems) {
+		return undefined
+	}
+	if (problems.length) {
+		return problems
+	}
 	for (const probed of probed_programs(code, jsx, next)) {
 		const found = typescript_problems(probed, jsx)
-		if (found?.length) return [
-			`probe ${JSON.stringify(probed)}`,
-			...found
-		]
+		if (found?.length) {
+			return [
+				`probe ${JSON.stringify(probed)}`,
+				...found
+			]
+		}
 	}
 	return [
 		...completion_problems(code, jsx, next),
@@ -292,7 +314,9 @@ function program_problems(code, jsx, next) {
  * @returns {void}
  */
 export function typescript_corpus(jsx) {
-	if (process.env["SIM_MODE"] != "typescript-corpus") return
+	if (process.env["SIM_MODE"] != "typescript-corpus") {
+		return
+	}
 	/** @type {string[]} */
 	const files = []
 	/**
@@ -328,12 +352,16 @@ export function typescript_corpus(jsx) {
 		files.length
 	)) {
 		const file = files[seed - 1]
-		if (!file) continue
+		if (!file) {
+			continue
+		}
 		const code = readFileSync(file, "utf8").replace(/^#!/, "//")
 		const problems = program_problems(code, jsx, random(seed))
-		if (problems?.length) failures.push(
-			`SIM_MODE=typescript-corpus SIM_SEED=${seed} ${file}\n${problems.join("\n")}`
-		)
+		if (problems?.length) {
+			failures.push(
+				`SIM_MODE=typescript-corpus SIM_SEED=${seed} ${file}\n${problems.join("\n")}`
+			)
+		}
 	}
 	report(failures)
 }
@@ -356,11 +384,14 @@ export function typescript_differential(jsx, count) {
  * @returns {string[] | undefined}
  */
 export function typescript_problems(code, jsx) {
-	const diagnostics = /** @type {unknown[]} */(Reflect.get(
+	/** @type {unknown[]} */
+	const diagnostics = Reflect.get(
 		parse_typescript(code, jsx),
 		"parseDiagnostics"
-	))/**/
-	if (diagnostics.length) return undefined
+	)
+	if (diagnostics.length) {
+		return undefined
+	}
 	try {
 		expect(dom_eater_ranges(code, jsx)).toStrictEqual(typescript_ranges(code, jsx))
 		return []

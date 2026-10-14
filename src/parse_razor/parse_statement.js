@@ -15,13 +15,17 @@ import spacing_all from "./spacing_all.js"
  */
 function parse_embedded_expression(ctx, index, encountered) {
 	const next = csharp_token(ctx.text, index + 1)
-	if (next?.kind == "@") return parse_standard_statement(ctx, next.end, encountered)
-	if (next?.kind == "{") add_error(
-		ctx,
-		"Unexpected \"{\" after \"@\" in a code block.",
-		index,
-		next.end
-	)
+	if (next?.kind == "@") {
+		return parse_standard_statement(ctx, next.end, encountered)
+	}
+	if (next?.kind == "{") {
+		add_error(
+			ctx,
+			"Unexpected \"{\" after \"@\" in a code block.",
+			index,
+			next.end
+		)
+	}
 	const nested = ctx.nested
 	ctx.nested = true
 	const end = parse_code_block(ctx, index)
@@ -40,16 +44,20 @@ export default function(ctx, index, encountered) {
 	for (;;) {
 		i = skip_tokens(ctx, i, spacing_all)
 		const token = csharp_token(text, i)
-		if (!token) return i
+		if (!token) {
+			return i
+		}
 		const next = csharp_token(text, token.end)?.kind
 		const single_line = token.kind == "@" && (next == ":" || next == "::")
 		if (single_line || token.kind == "<" || token.kind == "@" && next == "<") {
-			if (token.kind == "@" && !single_line) add_error(
-				ctx,
-				"\"@\" in a code block must be followed by \":\", \"(\" or an identifier.",
-				i,
-				token.end
-			)
+			if (token.kind == "@" && !single_line) {
+				add_error(
+					ctx,
+					"\"@\" in a code block must be followed by \":\", \"(\" or an identifier.",
+					i,
+					token.end
+				)
+			}
 			return parse_markup_in_code(ctx, i)
 		}
 		if (token.kind == "@*") {
@@ -71,8 +79,12 @@ export default function(ctx, index, encountered) {
 				? keyword(ctx, i, false)
 				: parse_standard_statement(ctx, i, encountered)
 		}
-		if (token.kind == "@") return parse_embedded_expression(ctx, i, encountered)
-		if (token.kind == "}") return i
+		if (token.kind == "@") {
+			return parse_embedded_expression(ctx, i, encountered)
+		}
+		if (token.kind == "}") {
+			return i
+		}
 		return parse_standard_statement(ctx, i, encountered)
 	}
 }

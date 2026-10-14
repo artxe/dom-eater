@@ -6,6 +6,10 @@ import is_newline from "./is_newline.js"
  */
 export default function(text, index) {
 	let i = index
-	while (i < text.length && !is_newline(text[i] ?? "")) i++
+	while (i < text.length && !is_newline(
+		/** @type {string} */(text[i])/**/
+	)) {
+		i++
+	}
 	return i
 }

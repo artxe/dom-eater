@@ -6,6 +6,8 @@
  */
 export default function(text, index, char) {
 	let i = index
-	while (text[i] == char) i++
+	while (text[i] == char) {
+		i++
+	}
 	return i
 }

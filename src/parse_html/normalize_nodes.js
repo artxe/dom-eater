@@ -153,13 +153,15 @@ export default function(nodes, errors, foreign_nodes) {
 		for (let i = closed.length - 1; i >= 0; i--) {
 			const open_element = /** @type {import("../../private.js").OpenElement} */(closed[i])/**/
 			const element = /** @type {import("../../public.js").Element} */(open_element.element)/**/
-			if (!optional_end_tags.has(open_element.name)) errors.push(
-				create_ast_syntax_error(
-					`The "${element.name}" element is not closed.`,
-					element.start,
-					element.end
+			if (!optional_end_tags.has(open_element.name)) {
+				errors.push(
+					create_ast_syntax_error(
+						`The "${element.name}" element is not closed.`,
+						element.start,
+						element.end
+					)
 				)
-			)
+			}
 		}
 		let siblings = current().children
 		for (const open_element of closed) {
@@ -168,14 +170,18 @@ export default function(nodes, errors, foreign_nodes) {
 				element.children = open_element.children
 				siblings = element.children
 			} else {
-				for (const child of open_element.children) siblings.push(child)
+				for (const child of open_element.children) {
+					siblings.push(child)
+				}
 			}
 		}
 		for (let i = closed.length - 1; i >= 0; i--) {
 			const open_element = /** @type {import("../../private.js").OpenElement} */(closed[i])/**/
 			const element = /** @type {import("../../public.js").Element} */(open_element.element)/**/
 			const last_child = element.children[element.children.length - 1]
-			if (optional_end_tags.has(open_element.name) && last_child) element.end = last_child.end
+			if (optional_end_tags.has(open_element.name) && last_child) {
+				element.end = last_child.end
+			}
 		}
 	}
 	/**
@@ -188,7 +194,9 @@ export default function(nodes, errors, foreign_nodes) {
 		if (node.type == "Element" && node.subType == "close") {
 			const name = node.name.toLowerCase()
 			let index = open_elements.length - 1
-			while (index > 0 && open_element_name(open_elements, index) != name) index--
+			while (index > 0 && open_element_name(open_elements, index) != name) {
+				index--
+			}
 			if (index) {
 				close_open_elements(
 					open_elements.length - 1 - index
@@ -217,13 +225,19 @@ export default function(nodes, errors, foreign_nodes) {
 				let outermost = 0
 				while (index > 0) {
 					const open_name = open_element_name(open_elements, index)
-					if (!optional_end_tags.has(open_name)) break
-					if (implied.has(open_name)) outermost = index
+					if (!optional_end_tags.has(open_name)) {
+						break
+					}
+					if (implied.has(open_name)) {
+						outermost = index
+					}
 					index--
 				}
-				if (outermost) close_open_elements(
-					open_elements.length - outermost
-				)
+				if (outermost) {
+					close_open_elements(
+						open_elements.length - outermost
+					)
+				}
 			}
 			current().children.push(node)
 			const raw_text_regex = foreign_nodes.has(node)

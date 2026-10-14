@@ -38,11 +38,15 @@ for (const parse of [
 	/** @ts-expect-error */
 	parse(0)
 }
-if (child.type == "Script" && child.subType == "template") child.elements.map(element => element.name)
+if (child.type == "Script" && child.subType == "template") {
+	child.elements.map(element => element.name)
+}
 if (node.type == "Script" && node.subType == "template") {
 	/** @ts-expect-error */
 	node.elements.map(element => element.name)
-	if ("elements" in node) node.elements.map(element => element.name)
+	if ("elements" in node) {
+		node.elements.map(element => element.name)
+	}
 }
 if (string_node.subType == "backtick") {
 	for (const script of string_node.scripts) {
@@ -50,7 +54,11 @@ if (string_node.subType == "backtick") {
 		script.elements.map(element => element.name)
 	}
 } else {
-	for (const script of string_node.scripts) if (script.subType == "template") script.elements.map(element => element.name)
+	for (const script of string_node.scripts) {
+		if (script.subType == "template") {
+			script.elements.map(element => element.name)
+		}
+	}
 }
 export const attribute_script: Equal<
 	Extract<Attribute["value"], { type: "Script" }>["subType"],

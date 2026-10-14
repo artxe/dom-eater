@@ -57,14 +57,18 @@ export default function(text, errors, template) {
 			}
 		}
 		const script = template.scripts[low - 1]
-		if (!script || script.end <= error.start) errors.push(error)
+		if (!script || script.end <= error.start) {
+			errors.push(error)
+		}
 	}
 	/**
 	 * @param {import("../../public.js").AstNode} node
 	 * @returns {import("../../public.js").Script | undefined}
 	 */
 	function substitution_of(node) {
-		if (node.type != "Script" || node.subType != "block") return
+		if (node.type != "Script" || node.subType != "block") {
+			return
+		}
 		const script = substitutions.get(node.start + offset)
 		return script?.end == node.end + offset
 			? script
@@ -91,7 +95,9 @@ export default function(text, errors, template) {
 			node.start += offset
 			node.end += offset
 			if (node.type == "Attribute") {
-				if (node.value === true) continue
+				if (node.value === true) {
+					continue
+				}
 				node.value.start += offset
 				node.value.end += offset
 				lists.push(
@@ -114,7 +120,9 @@ export default function(text, errors, template) {
 		if (node.type == "Element") {
 			elements.push(node)
 		} else if (node.type == "Script" && "elements" in node) {
-			for (const element of node.elements) elements.push(element)
+			for (const element of node.elements) {
+				elements.push(element)
+			}
 		}
 	}
 	return elements

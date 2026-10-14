@@ -11,7 +11,8 @@ import parse_markup_nodes from "../parse_markup_nodes.js"
  */
 export default function(ctx, index) {
 	const { text } = ctx
-	const frames = [ create_root_frame() ]
+	const root = create_root_frame()
+	const frames = [ root ]
 	let nesting = 1
 	let i = index
 	while (nesting > 0 && i < text.length) {
@@ -26,14 +27,18 @@ export default function(ctx, index) {
 		if (token?.kind == "text") {
 			while (i < token.end) {
 				const char = text[i]
-				if (char == "{") nesting++
-				if (char == "}" && !--nesting) break
+				if (char == "{") {
+					nesting++
+				}
+				if (char == "}" && !--nesting) {
+					break
+				}
 				i++
 			}
 		} else if (token) {
 			i = parse_markup_node(ctx, frames, i, "markup")
 		} else {
-			/** @type {import("../../../private.js").RazorFrame} */(frames[0])/**/.flushed = i
+			root.flushed = i
 		}
 	}
 	while (frames.length > 1) {
@@ -41,10 +46,7 @@ export default function(ctx, index) {
 		close_unclosed(
 			ctx,
 			frames,
-			Math.max(
-				element.end,
-				frames[0]?.flushed ?? 0
-			)
+			Math.max(element.end, root.flushed)
 		)
 	}
 	return {

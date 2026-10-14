@@ -1,4 +1,3 @@
-import create_ast_syntax_error from "../create_ast_syntax_error.js"
 import not_string_result from "../not_string_result.js"
 import set_text from "../set_text.js"
 import parse_markup from "./parse_markup.js"
@@ -18,22 +17,14 @@ import parse_markup from "./parse_markup.js"
  * if (p?.type == "Element") p.attributes.map(attribute => attribute.name) // [ "class" ]
  */
 export default function(text, include_text) {
-	if (typeof text != "string") return not_string_result()
+	if (typeof text != "string") {
+		return not_string_result()
+	}
 	/** @type {import("../../public.js").AstSyntaxError[]} */
 	const errors = []
-	try {
-		const ast = parse_markup(text, errors)
-		if (include_text) set_text(text, ast)
-		return { ast, errors }
-	} catch (error) {
-		if (!(error instanceof RangeError)) throw error
-		errors.push(
-			create_ast_syntax_error(
-				"The input is nested too deeply.",
-				0,
-				text.length
-			)
-		)
-		return { ast: [], errors }
+	const ast = parse_markup(text, errors)
+	if (include_text) {
+		set_text(text, ast)
 	}
+	return { ast, errors }
 }

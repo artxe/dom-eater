@@ -202,14 +202,20 @@ export function collect(ast, type) {
 	 * @returns {void}
 	 */
 	function visit(node) {
-		if (node.type == type) found.push(node)
+		if (node.type == type) {
+			found.push(node)
+		}
 		if (node.type == "Attribute") {
-			if (node.value !== true) visit(node.value)
+			if (node.value !== true) {
+				visit(node.value)
+			}
 		} else if (node.type == "Element") {
 			node.attributes.forEach(visit)
 			node.children.forEach(visit)
 		} else if (node.type == "Script") {
-			if ("elements" in node) node.elements.forEach(visit)
+			if ("elements" in node) {
+				node.elements.forEach(visit)
+			}
 			node.strings.forEach(visit)
 		} else if (node.type == "String") {
 			node.scripts.forEach(visit)
@@ -333,19 +339,27 @@ export function razor_items(source, parse) {
 					`attribute ${attribute.start}-${attribute.end} ${JSON.stringify(attribute.name)} ${value}`
 				)
 				if (attribute.value !== true && attribute.value.type == "String") {
-					for (const script of attribute.value.scripts) pending.push(script)
+					for (const script of attribute.value.scripts) {
+						pending.push(script)
+					}
 				}
 			}
-			for (const child of node.children) pending.push(child)
+			for (const child of node.children) {
+				pending.push(child)
+			}
 		} else if (node.type == "Script") {
 			items.push(
 				`script ${node.start}-${node.end}`
 			)
-			for (const string of node.strings) items.push(
-				`string ${string.start}-${string.end}`
-			)
+			for (const string of node.strings) {
+				items.push(
+					`string ${string.start}-${string.end}`
+				)
+			}
 			if ("elements" in node) {
-				for (const element of node.elements) pending.push(element)
+				for (const element of node.elements) {
+					pending.push(element)
+				}
 			}
 		} else if (node.type == "Comment" && source.startsWith("@*", node.start)) {
 			items.push(
@@ -428,7 +442,9 @@ export function string_node(text, sub_type, scripts = []) {
  * @returns {unknown}
  */
 function strip_positions(value) {
-	if (Array.isArray(value)) return value.map(strip_positions)
+	if (Array.isArray(value)) {
+		return value.map(strip_positions)
+	}
 	if (value && typeof value == "object") {
 		return Object.fromEntries(
 			Object.entries(value)

@@ -37,7 +37,9 @@ function resolvable(code) {
 		/(?:from|import)\s*\(?\s*["']([^"']+)["']/g
 	)) {
 		const name = /** @type {string} */(specifier)/**/
-		if (name.startsWith("node:")) continue
+		if (name.startsWith("node:")) {
+			continue
+		}
 		try {
 			require_from_root.resolve(name)
 		} catch {
@@ -71,7 +73,9 @@ function skipped() {
 		/^(\t| *)```ts\n([\s\S]*?)^\1```/gm
 	)) {
 		const code = /** @type {string} */(match[2])/**/
-		if (!match[1] && !resolvable(code)) count++
+		if (!match[1] && !resolvable(code)) {
+			count++
+		}
 	}
 	return count
 }
@@ -85,7 +89,9 @@ function ts_blocks() {
 		/^(\t| *)```ts\n([\s\S]*?)^\1```/gm
 	)) {
 		const code = /** @type {string} */(match[2])/**/
-		if (match[1] || !resolvable(code)) continue
+		if (match[1] || !resolvable(code)) {
+			continue
+		}
 		blocks.push(
 			{
 				code,

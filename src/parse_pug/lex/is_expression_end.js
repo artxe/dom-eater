@@ -4,6 +4,12 @@ import is_operand_end from "./is_operand_end.js"
  * @returns {boolean}
  */
 export default function(state) {
-	if (state.line_comment || state.ternaries != 0) return false
-	return is_operand_end(state)
+	let view = state
+	while (view.tail) {
+		view = view.tail
+	}
+	if (view.line_comment || view.stack.length != 0 || view.ternaries != 0) {
+		return false
+	}
+	return is_operand_end(view)
 }

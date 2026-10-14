@@ -2,7 +2,7 @@
 
 A fast, error-tolerant AST parser for markup in HTML templates, JSX/TSX, JavaScript/TypeScript, Razor and Pug.
 
-DOM Eater is built for [Intellisense Click CSS](https://github.com/artxe/click-css), a VS Code extension that highlights and completes CSS written in class attributes. Its AST is general enough for other editor tooling that needs the same information, but its scope and API follow what that extension needs:
+DOM Eater is built for editor tooling that highlights and completes CSS written in class attributes. Its AST is general enough for other tooling that needs the same information, but its scope and API follow what that tooling needs:
 
 - It finds elements, attributes, text, and the script regions and string literals inside them, with exact source positions.
 - It does not parse JavaScript or C#. It scans them the way the TypeScript parser and the Razor compiler read them, to decide what `{`, `}`, `<`, `/`, `@` and quotes mean, and skips the rest. If you need a JavaScript AST, use a JavaScript parser.

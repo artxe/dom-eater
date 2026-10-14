@@ -88,8 +88,10 @@ function add_error(parser, message, token) {
  */
 function advance(parser) {
 	const token = peek(parser)
-	if (token.type != "eos") parser.index++
-	if (!content_less_tokens.has(token.type)) parser.last_end = Math.max(parser.last_end, token.end)
+	parser.index++
+	if (!content_less_tokens.has(token.type)) {
+		parser.last_end = Math.max(parser.last_end, token.end)
+	}
 	return token
 }
 /**
@@ -146,11 +148,13 @@ function attrs(parser, element, names) {
 	for (let token = peek(parser); token.type == "attribute"; token = peek(parser)) {
 		advance(parser)
 		if (token.name != "class") {
-			if (names.has(token.name)) add_error(
-				parser,
-				`Duplicate attribute "${token.name}" is not allowed.`,
-				token
-			)
+			if (names.has(token.name)) {
+				add_error(
+					parser,
+					`Duplicate attribute ${JSON.stringify(token.name)} is not allowed.`,
+					token
+				)
+			}
 			names.add(token.name)
 		}
 		if (token.name != "" || token.buffer || token.value_start >= 0) {
@@ -165,7 +169,9 @@ function attrs(parser, element, names) {
  * @returns {void}
  */
 function block(parser, sink) {
-	if (!expect(parser, "indent")) return
+	if (!expect(parser, "indent")) {
+		return
+	}
 	for (let token = peek(parser); token.type != "outdent" && token.type != "eos"; token = peek(parser)) {
 		if (token.type == "newline") {
 			advance(parser)
@@ -187,17 +193,23 @@ function dedent_lines(src, offsets) {
 	const lines = src.split("\n")
 	let indent = Infinity
 	for (const line of lines) {
-		if (line.trim() != "") indent = Math.min(
-			indent,
-			line.length - line.trimStart().length
-		)
+		if (line.trim() != "") {
+			indent = Math.min(
+				indent,
+				line.length - line.trimStart().length
+			)
+		}
 	}
-	if (indent == 0 || indent == Infinity) return undefined
+	if (indent == 0 || indent == Infinity) {
+		return undefined
+	}
 	const dedented_offsets = new Int32Array(src.length + 1)
 	let length = 0
 	let line_start = 0
 	for (const line of lines) {
-		if (line_start > 0) dedented_offsets[length++] = line_start - 1
+		if (line_start > 0) {
+			dedented_offsets[length++] = line_start - 1
+		}
 		for (let i = line_start + Math.min(indent, line.length); i < line_start + line.length; i++) {
 			dedented_offsets[length++] = i
 		}
@@ -240,7 +252,9 @@ function expect(parser, type) {
 function flush(parser, sink) {
 	let end = sink[sink.length - 1]?.end ?? 0
 	for (const comment of parser.pending) {
-		if (comment.start < end) continue
+		if (comment.start < end) {
+			continue
+		}
 		sink.push(comment)
 		end = comment.end
 	}
@@ -262,17 +276,25 @@ function normalize(text) {
 function normalize_offsets(text) {
 	const bom = text.charCodeAt(0) == 65279
 	let carriage_return = text.indexOf("\r")
-	if (!bom && carriage_return < 0) return undefined
+	if (!bom && carriage_return < 0) {
+		return undefined
+	}
 	const offsets = new Int32Array(text.length + 1)
 	let length = 0
 	let i = bom
 		? 1
 		: 0
 	for (; carriage_return >= 0; carriage_return = text.indexOf("\r", i)) {
-		for (; i <= carriage_return; i++) offsets[length++] = i
-		if (text.charCodeAt(i) == 10) i++
+		for (; i <= carriage_return; i++) {
+			offsets[length++] = i
+		}
+		if (text.charCodeAt(i) == 10) {
+			i++
+		}
 	}
-	for (; i < text.length; i++) offsets[length++] = i
+	for (; i < text.length; i++) {
+		offsets[length++] = i
+	}
 	offsets[length] = text.length
 	return offsets.subarray(0, length + 1)
 }
@@ -290,14 +312,10 @@ function parse_block_code(parser, sink) {
 		for (let next = peek(parser); next.type != "end-pipeless-text" && next.type != "eos"; next = peek(parser)) {
 			advance(parser)
 			if (next.type == "text") {
-				if (code_start < 0) code_start = next.start
+				if (code_start < 0) {
+					code_start = next.start
+				}
 				code_end = next.end
-			} else if (next.type != "newline") {
-				add_error(
-					parser,
-					`Did not expect ${token_descriptions[next.type]} here.`,
-					next
-				)
 			}
 		}
 		expect(parser, "end-pipeless-text")
@@ -370,7 +388,9 @@ function parse_call(parser, sink) {
  */
 function parse_case(parser, sink) {
 	push_script(parser, sink, advance(parser))
-	if (!expect(parser, "indent")) return
+	if (!expect(parser, "indent")) {
+		return
+	}
 	for (let token = peek(parser); token.type != "outdent" && token.type != "eos"; token = peek(parser)) {
 		if (token.type == "comment") {
 			parse_comment(parser, sink)
@@ -378,7 +398,9 @@ function parse_case(parser, sink) {
 			advance(parser)
 		} else if (token.type == "when") {
 			push_script(parser, sink, advance(parser))
-			if (peek(parser).type != "newline") parse_block_expansion(parser, sink)
+			if (peek(parser).type != "newline") {
+				parse_block_expansion(parser, sink)
+			}
 		} else if (token.type == "default") {
 			push_script(parser, sink, advance(parser))
 			parse_block_expansion(parser, sink)
@@ -421,6 +443,7 @@ function parse_comment(parser, sink) {
 			}
 		}
 		expect(parser, "end-pipeless-text")
+		parser.pending = []
 	}
 	push_node(
 		parser,
@@ -443,17 +466,23 @@ function parse_comment(parser, sink) {
  */
 function parse_conditional(parser, sink) {
 	push_script(parser, sink, advance(parser))
-	if (peek(parser).type == "indent") block(parser, sink)
+	if (peek(parser).type == "indent") {
+		block(parser, sink)
+	}
 	for (;;) {
 		const token = peek(parser)
 		if (token.type == "newline") {
 			advance(parser)
 		} else if (token.type == "else-if") {
 			push_script(parser, sink, advance(parser))
-			if (peek(parser).type == "indent") block(parser, sink)
+			if (peek(parser).type == "indent") {
+				block(parser, sink)
+			}
 		} else if (token.type == "else") {
 			push_script(parser, sink, advance(parser))
-			if (peek(parser).type == "indent") block(parser, sink)
+			if (peek(parser).type == "indent") {
+				block(parser, sink)
+			}
 			break
 		} else {
 			break
@@ -492,15 +521,19 @@ function parse_expr(parser, sink) {
 		break
 	case "block":
 		advance(parser)
-		if (peek(parser).type == "indent") block(parser, sink)
+		if (peek(parser).type == "indent") {
+			block(parser, sink)
+		}
 		break
 	case "mixin-block":
 		advance(parser)
-		if (!parser.in_mixin) add_error(
-			parser,
-			"Anonymous blocks are not allowed unless they are part of a mixin.",
-			token
-		)
+		if (!parser.in_mixin) {
+			add_error(
+				parser,
+				"Anonymous blocks are not allowed unless they are part of a mixin.",
+				token
+			)
+		}
 		break
 	case "case":
 		parse_case(parser, sink)
@@ -549,11 +582,13 @@ function parse_expr(parser, sink) {
 	case "code":
 		push_script(parser, sink, advance(parser))
 		if (peek(parser).type == "indent") {
-			if (token.buffer) add_error(
-				parser,
-				"Buffered code cannot have a block attached to it.",
-				peek(parser)
-			)
+			if (token.buffer) {
+				add_error(
+					parser,
+					"Buffered code cannot have a block attached to it.",
+					peek(parser)
+				)
+			}
 			block(parser, sink)
 		}
 		break
@@ -565,7 +600,9 @@ function parse_expr(parser, sink) {
 		break
 	case "while":
 		push_script(parser, sink, advance(parser))
-		if (peek(parser).type == "indent") block(parser, sink)
+		if (peek(parser).type == "indent") {
+			block(parser, sink)
+		}
 		break
 	case "call":
 		parse_call(parser, sink)
@@ -632,11 +669,15 @@ function parse_include(parser, sink) {
 		filters++
 	}
 	const path = peek(parser)
-	if (!expect(parser, "path")) return
+	if (!expect(parser, "path")) {
+		return
+	}
 	if (pug_path_regex.test(
 		parser.src.slice(path.start, path.end).trim()
 	) && !filters) {
-		if (peek(parser).type == "indent") block(parser, sink)
+		if (peek(parser).type == "indent") {
+			block(parser, sink)
+		}
 	} else if (peek(parser).type == "indent") {
 		add_error(
 			parser,
@@ -676,7 +717,9 @@ function parse_text(parser, sink, block_text) {
  * @returns {void}
  */
 function parse_text_block(parser, sink) {
-	if (peek(parser).type != "start-pipeless-text") return
+	if (peek(parser).type != "start-pipeless-text") {
+		return
+	}
 	advance(parser)
 	for (let token = peek(parser); token.type != "end-pipeless-text" && token.type != "eos"; token = peek(parser)) {
 		if (token.type == "start-pug-interpolation") {
@@ -737,9 +780,9 @@ function parse_unexpected(parser, sink) {
 		block(parser, sink)
 	} else if (token.type == "else" || token.type == "else-if" || token.type == "when" || token.type == "default") {
 		push_script(parser, sink, advance(parser))
-		if (peek(parser).type == "indent" || peek(parser).type == ":") parse_block_expansion(parser, sink)
-	} else if (token.type == "start-pipeless-text") {
-		parse_text_block(parser, sink)
+		if (peek(parser).type == "indent" || peek(parser).type == ":") {
+			parse_block_expansion(parser, sink)
+		}
 	} else if (token.type == "start-attributes") {
 		skip_attrs(parser)
 	} else if (token.type != "eos" && token.type != "newline" && token.type != "outdent") {
@@ -754,7 +797,9 @@ function peek(parser) {
 	const token = /** @type {import("../../private.js").PugToken} */(parser.tokens[parser.index])/**/
 	const comments = parser.comments.get(token)
 	if (comments) {
-		for (const comment of comments) parser.pending.push(comment)
+		for (const comment of comments) {
+			parser.pending.push(comment)
+		}
 		parser.comments.delete(token)
 	}
 	return token
@@ -862,14 +907,24 @@ function remap(ast, errors, offsets, base) {
 		node.end = position(node.end)
 		node.start = position(node.start)
 		if (node.type == "Attribute") {
-			if (node.value !== true) pending.push(node.value)
+			if (node.value !== true) {
+				pending.push(node.value)
+			}
 		} else if (node.type == "Element") {
-			for (const attribute of node.attributes) pending.push(attribute)
-			for (const child of node.children) pending.push(child)
+			for (const attribute of node.attributes) {
+				pending.push(attribute)
+			}
+			for (const child of node.children) {
+				pending.push(child)
+			}
 		} else if (node.type == "Script") {
-			for (const string of node.strings) pending.push(string)
+			for (const string of node.strings) {
+				pending.push(string)
+			}
 		} else if (node.type == "String") {
-			for (const script of node.scripts) pending.push(script)
+			for (const script of node.scripts) {
+				pending.push(script)
+			}
 		}
 	}
 }
@@ -878,9 +933,13 @@ function remap(ast, errors, offsets, base) {
  * @returns {void}
  */
 function skip_attrs(parser) {
-	if (peek(parser).type != "start-attributes") return
+	if (peek(parser).type != "start-attributes") {
+		return
+	}
 	advance(parser)
-	while (peek(parser).type == "attribute") advance(parser)
+	while (peek(parser).type == "attribute") {
+		advance(parser)
+	}
 	expect(parser, "end-attributes")
 }
 /**
@@ -962,11 +1021,13 @@ function tag(
 		if (token.type == "id" || token.type == "class") {
 			advance(parser)
 			if (token.type == "id") {
-				if (names.has("id")) add_error(
-					parser,
-					"Duplicate attribute \"id\" is not allowed.",
-					token
-				)
+				if (names.has("id")) {
+					add_error(
+						parser,
+						"Duplicate attribute \"id\" is not allowed.",
+						token
+					)
+				}
 				names.add("id")
 			}
 			element.attributes.push(
@@ -1018,7 +1079,9 @@ function tag(
 		}
 	}
 	const text_only = peek(parser).type == "dot"
-	if (text_only) advance(parser)
+	if (text_only) {
+		advance(parser)
+	}
 	const token = peek(parser)
 	if (token.type == "text" || token.type == "interpolated-code") {
 		parse_text(parser, element.children, false)
@@ -1042,7 +1105,9 @@ function tag(
 			token
 		)
 	}
-	while (peek(parser).type == "newline") advance(parser)
+	while (peek(parser).type == "newline") {
+		advance(parser)
+	}
 	if (text_only) {
 		element.children.length = 0
 		parse_text_block(parser, element.children)
@@ -1065,7 +1130,9 @@ function trim_end(src, start, end) {
 	let index = end
 	while (index > start && is_js_whitespace(
 		/** @type {string} */(src[index - 1])/**/
-	)) index--
+	)) {
+		index--
+	}
 	return index
 }
 /**
@@ -1109,7 +1176,9 @@ export default function(text, include_text, base, dedent) {
 					parse_expr(parser, ast)
 				}
 			} catch (error) {
-				if (!(error instanceof RangeError)) throw error
+				if (!(error instanceof RangeError)) {
+					throw error
+				}
 				ast.length = node_count
 				parser.pending = []
 				errors.push(
@@ -1123,11 +1192,17 @@ export default function(text, include_text, base, dedent) {
 			}
 		}
 		flush(parser, ast)
-		if (offsets || base) remap(ast, errors, offsets, base)
-		if (include_text) set_text(text, ast)
+		if (offsets || base) {
+			remap(ast, errors, offsets, base)
+		}
+		if (include_text) {
+			set_text(text, ast)
+		}
 		return { ast, errors }
 	} catch (error) {
-		if (!(error instanceof RangeError)) throw error
+		if (!(error instanceof RangeError)) {
+			throw error
+		}
 		return {
 			ast: [],
 			errors: [

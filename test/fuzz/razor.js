@@ -53,7 +53,9 @@ function build_reference(component) {
 		"dotnet",
 		[ "--version" ],
 		{ shell: false }
-	).status !== 0) return undefined
+	).status !== 0) {
+		return undefined
+	}
 	const artifacts = join(
 		tmpdir(),
 		`dom-eater-razor-${component ? "component" : "legacy"}`
@@ -86,9 +88,11 @@ function build_reference(component) {
 /**
  * @param {string} text
  * @param {boolean} component
- * @returns {string[]}
+ * @returns {{ comments: [ number, number ][], items: string[] }}
  */
 function dom_eater_items(text, component) {
+	/** @type {[ number, number ][]} */
+	const comments = []
 	/** @type {string[]} */
 	const items = []
 	/**
@@ -97,33 +101,53 @@ function dom_eater_items(text, component) {
 	 * @returns {void}
 	 */
 	function visit(node, in_string) {
-		if (node.type == "Element") {
+		if (node.type == "Comment") {
+			if (text[node.start] == "<") {
+				comments.push([ node.start, node.end ])
+			}
+		} else if (node.type == "Element") {
 			items.push(
-				`element ${node.start}-${node.end} ${node.subType} ${JSON.stringify(node.name.replace(/^!/, ""))}`
+				`element ${node.start}-${node.end} ${node.subType} ${quoted(node.name.replace(/^!/, ""))}`
 			)
 			for (const attribute of node.attributes) {
-				if (attribute.name != "") items.push(
-					`attribute ${attribute.start}-${attribute.end} ${JSON.stringify(attribute.name)}`
-				)
-				if (attribute.value !== true) visit(attribute.value, false)
+				if (attribute.name != "") {
+					items.push(
+						`attribute ${attribute.start}-${attribute.end} ${quoted(attribute.name)}`
+					)
+				}
+				if (attribute.value !== true) {
+					visit(attribute.value, false)
+				}
 			}
-			for (const child of node.children) visit(child, false)
+			for (const child of node.children) {
+				visit(child, false)
+			}
 		} else if (node.type == "Script") {
 			for (const string of node.strings) {
-				if (!in_string) items.push(
-					`string ${string.start}-${string.end}`
-				)
-				for (const script of string.scripts) visit(script, true)
+				if (!in_string) {
+					items.push(
+						`string ${string.start}-${string.end}`
+					)
+				}
+				for (const script of string.scripts) {
+					visit(script, true)
+				}
 			}
 			if ("elements" in node) {
-				for (const element of node.elements) visit(element, false)
+				for (const element of node.elements) {
+					visit(element, false)
+				}
 			}
 		} else if (node.type == "String") {
-			for (const script of node.scripts) visit(script, in_string)
+			for (const script of node.scripts) {
+				visit(script, in_string)
+			}
 		}
 	}
-	for (const node of (component ? parseRazorComponent : parseRazor)(text).ast) visit(node, false)
-	return items
+	for (const node of (component ? parseRazorComponent : parseRazor)(text).ast) {
+		visit(node, false)
+	}
+	return { comments, items }
 }
 /**
  * @param {boolean} component
@@ -152,14 +176,30 @@ function mutated_page(component, seed) {
 	return source
 }
 /**
+ * The name as the reference dumps it: a surrogate escaped as `\uD83D`.
+ * @param {string} name
+ * @returns {string}
+ */
+function quoted(name) {
+	return JSON.stringify(name).replace(
+		/[\uD800-\uDFFF]/g,
+		char => `\\u${char.charCodeAt(0).toString(16)
+			.toUpperCase()}`
+	)
+}
+/**
  * @param {boolean} component
  * @param {number} count
  * @returns {void}
  */
 export function razor_differential(component, count) {
-	if (process.env["SIM_MODE"] != "razor") return
+	if (process.env["SIM_MODE"] != "razor") {
+		return
+	}
 	const dll = build_reference(component)
-	if (!dll) return
+	if (!dll) {
+		return
+	}
 	/** @type {Map<string, { diagnostics: number, error: string | null, items: string[] }>} */
 	const cache = new Map()
 	/**
@@ -186,7 +226,7 @@ export function razor_differential(component, count) {
 				.forEach(
 					(line, j) => cache.set(
 						/** @type {string} */(batch[j])/**/,
-						/** @type {{ diagnostics: number, error: string | null, items: string[] }} */(JSON.parse(line))/**/
+						JSON.parse(line)
 					)
 				)
 		}
@@ -210,16 +250,29 @@ export function razor_differential(component, count) {
 		count,
 		seed => mutated_page(component, seed),
 		text => {
-			if (!usable(text)) return undefined
+			if (!usable(text)) {
+				return undefined
+			}
 			query(dll, [ text ])
 			const reference = cache.get(text)
-			if (!reference || reference.error || reference.diagnostics) return undefined
+			if (!reference || reference.error || reference.diagnostics) {
+				return undefined
+			}
+			const found = dom_eater_items(text, component)
 			const expected = new Set(
-				reference_items(reference.items, text)
+				reference_items(reference.items, text).filter(
+					item => {
+						const [ start, end ] = item.startsWith("string ")
+							? item.slice(7).split("-")
+								.map(Number)
+							: []
+						return !found.comments.some(
+							([ comment_start, comment_end ]) => comment_start <= Number(start) && Number(end) <= comment_end
+						)
+					}
+				)
 			)
-			const actual = new Set(
-				dom_eater_items(text, component)
-			)
+			const actual = new Set(found.items)
 			return [
 				...[ ...expected ].filter(item => !actual.has(item)).map(item => `Razor only: ${item}`),
 				...[ ...actual ].filter(item => !expected.has(item)).map(
@@ -241,12 +294,16 @@ function reference_items(items, text) {
 		)
 		.map(
 			item => {
-				if (!item.startsWith("token ")) return item
+				if (!item.startsWith("token ")) {
+					return item
+				}
 				const [ start, end ] = String(item.split(" ")[2]).split("-")
 					.map(Number)
 				let from = Number(start)
-				while (text[from] == "$" || text[from] == "@") from++
-				return `string ${from}-${end}`
+				while (text[from] == "$" || text[from] == "@") {
+					from++
+				}
+				return `string ${from}-${/"[Uu]8$/.test(text.slice(from, Number(end))) ? Number(end) - 2 : end}`
 			}
 		)
 }

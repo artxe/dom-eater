@@ -25,7 +25,9 @@ export default function(text, errors, start, bracket) {
 	const strings = []
 	for (;;) {
 		const child_index = text.slice(child_pre_index).search(stop_script_template_regex)
-		if (child_index < 0) break
+		if (child_index < 0) {
+			break
+		}
 		const index = child_pre_index + child_index
 		if (text[index] == "}") {
 			return {

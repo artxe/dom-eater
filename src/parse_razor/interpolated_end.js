@@ -17,7 +17,9 @@ function format_end(text, index, kind, scanner) {
 	let i = index + 1
 	for (;;) {
 		const char = text[i]
-		if (char === undefined) return i
+		if (char === undefined) {
+			return i
+		}
 		if (char == "\\" && kind == "normal") {
 			i = escape_end(text, i)
 		} else if (char == "\"") {
@@ -42,14 +44,16 @@ function format_end(text, index, kind, scanner) {
  * @param {"normal" | "verbatim" | "single" | "multi"} kind
  * @param {string} ending
  * @param {boolean} hole
- * @param {{ error: boolean }} scanner
+ * @param {{ colon: number, error: boolean }} scanner
  * @returns {number}
  */
 function hole_end(text, index, kind, ending, hole, scanner) {
 	let i = index
 	for (;;) {
 		const char = text[i]
-		if (char === undefined) return i
+		if (char === undefined) {
+			return i
+		}
 		const next = text[i + 1]
 		if (char == "#") {
 			scanner.error = true
@@ -57,13 +61,18 @@ function hole_end(text, index, kind, ending, hole, scanner) {
 		} else if (char == "$" && (next == "$" || next == "@" || next == "\"")) {
 			i = interpolated_end(text, i)
 		} else if (char == ":" && hole) {
+			scanner.colon = i
 			return format_end(text, i, kind, scanner)
 		} else if (char == "}" || char == ")" || char == "]") {
-			if (char == ending) return i
+			if (char == ending) {
+				return i
+			}
 			scanner.error = true
 			i++
 		} else if (char == "\"") {
-			if (scanner.error) return i
+			if (scanner.error) {
+				return i
+			}
 			i = string_literal_end(text, i)
 		} else if (char == "'") {
 			i = string_literal_end(text, i)
@@ -95,7 +104,9 @@ function hole_end(text, index, kind, ending, hole, scanner) {
 					? ")"
 					: "]"
 			i = hole_end(text, i + 1, kind, close, false, scanner)
-			if (text[i] == close) i++
+			if (text[i] == close) {
+				i++
+			}
 		} else {
 			i++
 		}
@@ -108,8 +119,8 @@ function hole_end(text, index, kind, ending, hole, scanner) {
  * @returns {number}
  */
 function interpolated_end(text, index, holes) {
-	/** @type {{ error: boolean }} */
-	const scanner = { error: false }
+	/** @type {{ colon: number, error: boolean }} */
+	const scanner = { colon: -1, error: false }
 	let i = index
 	let unrecoverable = false
 	/** @type {"normal" | "verbatim" | "single" | "multi"} */
@@ -129,8 +140,12 @@ function interpolated_end(text, index, holes) {
 		dollars = dollar_end - at_end
 		quotes = quote_end - second_at_end
 		i = quote_end
-		if (!quotes) return i
-		if (at_end > index || second_at_end > dollar_end || quotes < 3) scanner.error = true
+		if (!quotes) {
+			return i
+		}
+		if (at_end > index || second_at_end > dollar_end || quotes < 3) {
+			scanner.error = true
+		}
 		const after = skip_whitespace(text, i)
 		if (is_newline(text[after] ?? "")) {
 			kind = "multi"
@@ -148,18 +163,26 @@ function interpolated_end(text, index, holes) {
 	}
 	for (;;) {
 		const char = text[i]
-		if (char === undefined || !allow_newline && is_newline(char)) break
+		if (char === undefined || !allow_newline && is_newline(char)) {
+			break
+		}
 		if (kind == "multi" && is_newline(char)) {
 			const after = skip_whitespace(text, newline_end(text, i))
-			if (skip_run(text, after, "\"") - after >= quotes) break
+			if (skip_run(text, after, "\"") - after >= quotes) {
+				break
+			}
 		}
 		if (char == "\"") {
 			if (kind == "normal" || kind == "verbatim") {
-				if (scanner.error || kind == "normal" || text[i + 1] != "\"") break
+				if (scanner.error || kind == "normal" || text[i + 1] != "\"") {
+					break
+				}
 				i += 2
 			} else {
 				const run_end = skip_run(text, i, "\"")
-				if (run_end - i >= quotes) break
+				if (run_end - i >= quotes) {
+					break
+				}
 				i = run_end
 			}
 		} else if (unrecoverable && (char == "{" || char == "}")) {
@@ -174,7 +197,9 @@ function interpolated_end(text, index, holes) {
 				}
 			} else {
 				const run_end = skip_run(text, i, "}")
-				if (run_end - i >= dollars) scanner.error = true
+				if (run_end - i >= dollars) {
+					scanner.error = true
+				}
 				i = run_end
 			}
 		} else if (char == "{") {
@@ -183,8 +208,9 @@ function interpolated_end(text, index, holes) {
 					i += 2
 				} else {
 					const open = i
+					scanner.colon = -1
 					i = hole_end(text, i + 1, kind, "}", true, scanner)
-					const content_end = i
+					const content_end = scanner.colon < 0 ? i : scanner.colon
 					if (text[i] == "}") {
 						i++
 					} else {
@@ -197,8 +223,12 @@ function interpolated_end(text, index, holes) {
 			} else {
 				const run_end = skip_run(text, i, "{")
 				if (run_end - i >= dollars) {
-					if (run_end - i >= 2 * dollars) scanner.error = true
+					if (run_end - i >= 2 * dollars) {
+						scanner.error = true
+					}
+					scanner.colon = -1
 					i = hole_end(text, run_end, kind, "}", true, scanner)
+					const content_end = scanner.colon < 0 ? i : scanner.colon
 					const close_end = skip_run(text, i, "}")
 					if (close_end == i || close_end - i < dollars) {
 						scanner.error = true
@@ -206,7 +236,7 @@ function interpolated_end(text, index, holes) {
 							[
 								run_end - dollars,
 								run_end,
-								i,
+								content_end,
 								close_end
 							]
 						)
@@ -216,7 +246,7 @@ function interpolated_end(text, index, holes) {
 							[
 								run_end - dollars,
 								run_end,
-								i,
+								content_end,
 								i + dollars
 							]
 						)
@@ -247,8 +277,12 @@ function interpolated_end(text, index, holes) {
 			? skip_run(text, i, "\"")
 			: i
 	}
-	if (i >= text.length) return i
-	if (text[i] == "\"") return skip_run(text, i, "\"")
+	if (i >= text.length) {
+		return i
+	}
+	if (text[i] == "\"") {
+		return skip_run(text, i, "\"")
+	}
 	return skip_run(
 		text,
 		skip_whitespace(text, newline_end(text, i)),

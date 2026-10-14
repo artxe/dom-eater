@@ -39,8 +39,11 @@ const token_chars = "!\"'/<=>?@[]"
  */
 function is_text_end(text, index) {
 	const code = text.charCodeAt(index)
-	if (code < 128) return text_end_codes.has(code) || code == 45 && text.charCodeAt(index + 1) == 45
-	return is_whitespace(text[index] ?? "") || is_newline(text[index] ?? "")
+	if (code < 128) {
+		return text_end_codes.has(code) || code == 45 && text.charCodeAt(index + 1) == 45
+	}
+	const char = /** @type {string} */(text[index])/**/
+	return is_whitespace(char) || is_newline(char)
 }
 /**
  * @param {string} text
@@ -49,7 +52,9 @@ function is_text_end(text, index) {
  */
 function scan_token(text, index) {
 	const char = text[index]
-	if (char === undefined) return
+	if (char === undefined) {
+		return
+	}
 	if (is_whitespace(char)) {
 		return {
 			end: skip_whitespace(text, index),
@@ -84,7 +89,7 @@ function scan_token(text, index) {
 	let previous = ""
 	for (;;) {
 		while (i < text.length && !is_text_end(text, i)) {
-			previous = text[i] ?? ""
+			previous = /** @type {string} */(text[i])/**/
 			i++
 		}
 		if (text[i] != "@" || !is_letter_or_digit(previous) || !is_letter_or_digit(text[i + 1] ?? "")) {
@@ -100,7 +105,9 @@ function scan_token(text, index) {
  * @returns {import("../../../private.js").RazorToken | undefined}
  */
 export default function(text, index) {
-	if (cache.index == index && cache.text === text) return cache.token
+	if (cache.index == index && cache.text === text) {
+		return cache.token
+	}
 	const token = scan_token(text, index)
 	cache.index = index
 	cache.text = text

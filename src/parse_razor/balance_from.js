@@ -25,19 +25,16 @@ function is_embedded_transition(text, token) {
 export default function(ctx, index, left, right, options) {
 	const { text } = ctx
 	const key = `${left}${options.backtrack ? "b" : ""}${options.templates ? "t" : ""}`
-	if (ctx.balance_failures.has(`${key}${index}`)) {
-		if (!options.no_error) add_error(
-			ctx,
-			`Expected "${right}".`,
-			index,
-			text.length
-		)
-		return {
-			end: options.backtrack
-				? index
-				: text.length,
-			ok: false
+	if (options.backtrack && ctx.balance_failures.has(`${key}${index}`)) {
+		if (!options.no_error) {
+			add_error(
+				ctx,
+				`Expected "${right}".`,
+				index - 1,
+				text.length
+			)
 		}
+		return { end: index, ok: false }
 	}
 	let backtrack = index
 	let i = index
@@ -79,7 +76,9 @@ export default function(ctx, index, left, right, options) {
 				nesting--
 			}
 			profile.push(nesting)
-			if (nesting > 0 && token) i = token.end
+			if (nesting > 0 && token) {
+				i = token.end
+			}
 		} while (nesting > 0 && csharp_token(text, i))
 	}
 	if (nesting > 0) {
@@ -97,13 +96,17 @@ export default function(ctx, index, left, right, options) {
 				ctx.balance_failures.add(`${key}${position}`)
 			}
 		}
-		if (!options.no_error) add_error(
-			ctx,
-			`Expected "${right}".`,
-			index,
-			i
-		)
-		if (options.backtrack) i = backtrack
+		if (!options.no_error) {
+			add_error(
+				ctx,
+				`Expected "${right}".`,
+				index - 1,
+				i
+			)
+		}
+		if (options.backtrack) {
+			i = backtrack
+		}
 	}
 	return { end: i, ok: nesting == 0 }
 }

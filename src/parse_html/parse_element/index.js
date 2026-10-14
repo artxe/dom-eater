@@ -27,7 +27,9 @@ const text_content_elements = new Set(
 function is_pug_template(text, node) {
 	return node.attributes.some(
 		attribute => {
-			if (attribute.name.toLowerCase() != "lang" || attribute.value === true) return false
+			if (attribute.name.toLowerCase() != "lang" || attribute.value === true) {
+				return false
+			}
 			const value = text.slice(
 				attribute.value.start,
 				attribute.value.end
@@ -48,16 +50,20 @@ function is_pug_template(text, node) {
  * @returns {import("../../../public.js").Element}
  */
 function parse_content(text, errors, node, foreign) {
-	if (node.subType != "open") return node
+	if (node.subType != "open") {
+		return node
+	}
 	const name = node.name.toLowerCase()
 	if (name == "plaintext" && !foreign) {
-		if (node.end < text.length) node.children.push(
-			{
-				end: text.length,
-				start: node.end,
-				type: "Text"
-			}
-		)
+		if (node.end < text.length) {
+			node.children.push(
+				{
+					end: text.length,
+					start: node.end,
+					type: "Text"
+				}
+			)
+		}
 		node.end = text.length
 	} else if (name == "script") {
 		const text_content = parse_script_content(text, errors, node.end)
@@ -90,7 +96,9 @@ function parse_content(text, errors, node, foreign) {
 			node.end,
 			true
 		)
-		for (const error of content.errors) errors.push(error)
+		for (const error of content.errors) {
+			errors.push(error)
+		}
 		if (close < 0) {
 			errors.push(
 				create_ast_syntax_error(

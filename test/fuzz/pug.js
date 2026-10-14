@@ -9,8 +9,10 @@ import { parsePug } from "dom-eater"
 import { createRequire } from "node:module"
 import lex from "pug-lexer"
 const require = createRequire(import.meta.url)
-const parse_tokens = /** @type {(tokens: unknown, options: { filename: string, src: string }) => unknown} */(require("pug-parser"))/**/
-const strip_comments = /** @type {(tokens: unknown, options: { filename: string }) => unknown} */(require("pug-strip-comments"))/**/
+/** @type {(tokens: unknown, options: { filename: string, src: string }) => unknown} */
+const parse_tokens = require("pug-parser")
+/** @type {(tokens: unknown, options: { filename: string }) => unknown} */
+const strip_comments = require("pug-strip-comments")
 const fixtures = [
 	"doctype html\nhtml(lang=\"en\")\n  head\n    title= pageTitle\n    script(type='text/javascript').\n      if (foo) bar(1 + 5)\n  body\n    h1#title.main Pug - node template engine\n    #container.col\n      if youAreUsingPug\n        p You are amazing\n      else\n        p Get on it!\n      p.\n        Pug is a terse and simple templating language.\n",
 	"extends layout\nblock content\n  - var items = [\"a\", 'b']\n  ul.list(data-count=items.length)\n    each item, i in items\n      li(class=\"item-\" + i, title=`${item}`)= item\n    else\n      li.empty No items\n",
@@ -93,16 +95,24 @@ function dom_eater_items(source) {
 				items.add(
 					`attribute ${attribute.start}-${attribute.end} ${JSON.stringify(attribute.name)} ${value}`
 				)
-				if (attribute.value !== true) visit(attribute.value, parent)
+				if (attribute.value !== true) {
+					visit(attribute.value, parent)
+				}
 			}
-			for (const child of node.children) visit(child, node.start)
+			for (const child of node.children) {
+				visit(child, node.start)
+			}
 		} else if (node.type == "Script") {
 			if ("elements" in node) {
-				for (const element of node.elements) visit(element, parent)
+				for (const element of node.elements) {
+					visit(element, parent)
+				}
 			}
 		}
 	}
-	for (const node of parsePug(source).ast) visit(node, -1)
+	for (const node of parsePug(source).ast) {
+		visit(node, -1)
+	}
 	return items
 }
 /**
@@ -186,7 +196,9 @@ function pug_items(source) {
 	}
 	const line_starts = [ 0 ]
 	for (let i = 0; i < source.length; i++) {
-		if (source[i] == "\n") line_starts.push(i + 1)
+		if (source[i] == "\n") {
+			line_starts.push(i + 1)
+		}
 	}
 	/**
 	 * @param {{ column: number, line: number }} position
@@ -203,17 +215,23 @@ function pug_items(source) {
 	for (const [ i, token ] of tokens.entries()) {
 		const start = offset(token.loc.start)
 		const range = `${start}-${offset(token.loc.end)}`
-		if (token.type == "start-attributes") in_filter = tokens[i - 1]?.type == "filter"
-		else if (token.type == "end-attributes") in_filter = false
-		else if (token.type == "&attributes") attribute_items.set(start, `&attributes ${range}`)
-		else if (token.type == "class" || token.type == "id") attribute_items.set(
-			start,
-			`attribute ${range} "${token.type}" ${JSON.stringify(token.val)}`
-		)
-		else if (token.type == "attribute" && !in_filter && token.name) attribute_items.set(
-			start,
-			`attribute ${range} ${JSON.stringify(token.name)} ${token.val === true ? "true" : JSON.stringify(String(token.val))}`
-		)
+		if (token.type == "start-attributes") {
+			in_filter = tokens[i - 1]?.type == "filter"
+		} else if (token.type == "end-attributes") {
+			in_filter = false
+		} else if (token.type == "&attributes") {
+			attribute_items.set(start, `&attributes ${range}`)
+		} else if (token.type == "class" || token.type == "id") {
+			attribute_items.set(
+				start,
+				`attribute ${range} "${token.type}" ${JSON.stringify(token.val)}`
+			)
+		} else if (token.type == "attribute" && !in_filter && token.name) {
+			attribute_items.set(
+				start,
+				`attribute ${range} ${JSON.stringify(token.name)} ${token.val === true ? "true" : JSON.stringify(String(token.val))}`
+			)
+		}
 	}
 	/**
 	 * @param {unknown} node
@@ -221,12 +239,19 @@ function pug_items(source) {
 	 * @returns {void}
 	 */
 	function visit(node, parent) {
-		if (!node || typeof node != "object") return
+		if (!node || typeof node != "object") {
+			return
+		}
 		if (Array.isArray(node)) {
-			for (const child of node) visit(child, parent)
+			for (const child of node) {
+				visit(child, parent)
+			}
 			return
 		}
 		const record = /** @type {Record<string, unknown>} */(node)/**/
+		if (record["type"] == "BlockComment") {
+			return
+		}
 		let inner = parent
 		const name = record["type"] == "Tag"
 			? record["name"]
@@ -250,7 +275,9 @@ function pug_items(source) {
 				.../** @type {{ column: number, line: number }[]} */(record["attrs"] ?? [])/**/
 			]) {
 				const item = attribute_items.get(offset(attribute))
-				if (item != undefined) items.add(item)
+				if (item != undefined) {
+					items.add(item)
+				}
 			}
 		}
 		for (const key of [
@@ -259,7 +286,9 @@ function pug_items(source) {
 			"code",
 			"consequent",
 			"nodes"
-		]) visit(record[key], inner)
+		]) {
+			visit(record[key], inner)
+		}
 	}
 	visit(ast, -1)
 	return items
@@ -269,9 +298,13 @@ function pug_items(source) {
  * @returns {string[] | undefined}
  */
 export function pug_problems(source) {
-	if (/\+[\t ]*\n|\+[\t ]*(?:[-\w]+|#\{[^\n}]*\}) +\((?!\s*[-\w]+ *=)|&attributes\([^)]*\n|\\#\[/.test(source)) return undefined
+	if (/\+[\t ]*\n|\+[\t ]*(?:[-\w]+|#\{[^\n}]*\}) +\((?!\s*[-\w]+ *=)|&attributes\([^)]*\n|\\#\[/.test(source) || spans_lines(source)) {
+		return undefined
+	}
 	const reference = pug_items(source)
-	if (!reference) return undefined
+	if (!reference) {
+		return undefined
+	}
 	const actual = dom_eater_items(source)
 	return [
 		...[ ...reference ].filter(item => !actual.has(item)).map(item => `pug only: ${item}`),
@@ -279,4 +312,32 @@ export function pug_problems(source) {
 			item => `dom-eater only: ${item}`
 		)
 	]
+}
+/**
+ * Whether an `&attributes(` argument runs past the end of its line, where Pug's line and column are wrong.
+ * @param {string} source
+ * @returns {boolean}
+ */
+function spans_lines(source) {
+	for (let at = source.indexOf("&attributes("); at >= 0; at = source.indexOf("&attributes(", at + 1)) {
+		let depth = 1
+		for (let i = at + 12; depth > 0; i++) {
+			const char = source[i]
+			if (char == undefined || char == "\n") {
+				return true
+			}
+			if (char == "\"" || char == "'" || char == "`") {
+				const close = source.indexOf(char, i + 1)
+				if (close < 0 || source.lastIndexOf("\n", close) > i) {
+					return true
+				}
+				i = close
+			} else if (char == "(") {
+				depth++
+			} else if (char == ")") {
+				depth--
+			}
+		}
+	}
+	return false
 }

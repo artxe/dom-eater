@@ -39,7 +39,9 @@ function parse_await(ctx, index, top_level) {
 		token_end(ctx, index),
 		spacing_comments
 	)
-	if (!top_level) return i
+	if (!top_level) {
+		return i
+	}
 	return is_keyword(ctx.text, i, "foreach")
 		? parse_conditional_block(ctx, i)
 		: parse_implicit_expression(ctx, i)
@@ -76,7 +78,9 @@ function parse_catch(ctx, index) {
 			spacing_all
 		)
 	)
-	if (!condition.ok) return condition.end
+	if (!condition.ok) {
+		return condition.end
+	}
 	let i = skip_tokens(ctx, condition.end, spacing_all)
 	if (is_keyword(ctx.text, i, "when")) {
 		const filter = try_parse_condition(
@@ -87,7 +91,9 @@ function parse_catch(ctx, index) {
 				spacing_all
 			)
 		)
-		if (!filter.ok) return filter.end
+		if (!filter.ok) {
+			return filter.end
+		}
 		i = skip_tokens(ctx, filter.end, spacing_all)
 	}
 	return parse_expected_code_block(ctx, i)
@@ -127,7 +133,9 @@ function parse_do(ctx, index) {
 		ctx.text,
 		skipped.important,
 		"while"
-	)) return skipped.end
+	)) {
+		return skipped.end
+	}
 	const condition = try_parse_condition(
 		ctx,
 		skip_tokens(
@@ -152,10 +160,12 @@ function parse_else(ctx, index) {
 		token_end(ctx, index),
 		spacing_all
 	)
-	if (is_keyword(ctx.text, i, "if")) return parse_after_if(
-		ctx,
-		parse_conditional_block(ctx, i)
-	)
+	if (is_keyword(ctx.text, i, "if")) {
+		return parse_after_if(
+			ctx,
+			parse_conditional_block(ctx, i)
+		)
+	}
 	return csharp_token(ctx.text, i)
 		? parse_expected_code_block(ctx, i)
 		: i
@@ -168,15 +178,19 @@ function parse_else(ctx, index) {
 function parse_expected_code_block(ctx, index) {
 	const { text } = ctx
 	const token = csharp_token(text, index)
-	if (!token) return index
+	if (!token) {
+		return index
+	}
 	const next = csharp_token(text, token.end)?.kind
 	const encountered = token.kind == "<" || token.kind == "@" && (next == ":" || next == "@")
-	if (encountered) add_error(
-		ctx,
-		"Single-line control flow statements cannot contain markup.",
-		index,
-		token.end
-	)
+	if (encountered) {
+		add_error(
+			ctx,
+			"Single-line control flow statements cannot contain markup.",
+			index,
+			token.end
+		)
+	}
 	return parse_statement(ctx, index, encountered)
 }
 /**
@@ -256,8 +270,12 @@ function parse_using(ctx, index, top_level) {
 	}
 	const global = is_keyword(text, after, "global")
 	const static_using = is_keyword(text, after, "static")
-	if (token?.kind != "identifier" && !global && !static_using) return after
-	if (!top_level) return parse_standard_statement(ctx, after, false)
+	if (token?.kind != "identifier" && !global && !static_using) {
+		return after
+	}
+	if (!top_level) {
+		return parse_standard_statement(ctx, after, false)
+	}
 	let i = after
 	if (static_using) {
 		i = parse_type_name(
@@ -272,10 +290,12 @@ function parse_using(ctx, index, top_level) {
 		i = parse_type_name(ctx, i).end
 		const equals = skip_tokens(ctx, i, spacing_all)
 		const assign = csharp_token(text, equals)
-		if (assign?.kind == "=") i = parse_type_name(
-			ctx,
-			skip_tokens(ctx, assign.end, spacing_all)
-		).end
+		if (assign?.kind == "=") {
+			i = parse_type_name(
+				ctx,
+				skip_tokens(ctx, assign.end, spacing_all)
+			).end
+		}
 	}
 	const semicolon = csharp_token(text, i)
 	return semicolon?.kind == ";"
@@ -320,11 +340,8 @@ function try_parse_condition(ctx, index) {
 			ok: false
 		}
 	}
-	const close = csharp_token(ctx.text, result.end)
 	return {
-		end: close?.kind == ")"
-			? close.end
-			: result.end,
+		end: token_end(ctx, result.end),
 		ok: true
 	}
 }

@@ -13,8 +13,12 @@ export default function(text, start, end, delimiter) {
 	const mismatches = []
 	for (let index = start; index < end; index++) {
 		const char = /** @type {string} */(text[index])/**/
-		if (state.stack.length == 0 && char == delimiter) return { end: index, mismatches }
-		if (!parse_char(state, char)) mismatches.push(index)
+		if (state.stack.length == 0 && char == delimiter) {
+			return { end: index, mismatches }
+		}
+		if (!parse_char(state, char)) {
+			mismatches.push(index)
+		}
 	}
 	return { end: -1, mismatches }
 }

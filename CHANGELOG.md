@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.0.1
+
+### Fixed
+
+- Scripts: a `/` after `{}` on the line after a member name (`a.b` + line break + `{}` + line break
+  + `/'/.test(q)`), after `)` of `for ((a) of …)`, and in the body of an optional method with a return
+  type (`async m?(): T { await /'/ }`) is read as TypeScript reads it.
+- Razor: a format clause of an interpolation hole, such as `""` in `$@"{x:""}"`, is no longer a
+  `String`; "Expected" errors for an unclosed `(`, `[` or `{` start at the bracket, and `@if (` at
+  the end of the input reports `Expected ")".` once; the end of an unclosed `<script>` follows the
+  Razor compiler after a code block and a line break in its start tag or before `@@`.
+- Razor: the end of an unclosed `<script>` after a code block and a line break also covers the
+  whitespace after the next `@` expression or comment when text or `@@` comes first
+  (`<script>@{ }` + line break + `@@@x y`), and not the text after a start tag whose attribute ends
+  in a code block and a line break (`<script a=@{ }` + line break + `>> x`);
+  an invalid unicode escape in an identifier, such as `@a\u62c("x")`, stays part of it, so the
+  string after it is found.
+- `parsePug`: a `/` after a postfix `++` or `--` or after `]` divides, so `p(a=x++/e/ b)` and
+  `p(a=a[0]/e/ b)` have one attribute value, as in Pug.
+- Pug: slashes in an attribute value are read the way the Pug lexer's parser (acorn) reads them,
+  where they differ from character-parser: `p(a=/b + // c`, a line break and ` d)` read as the
+  attributes `a` and `d`, not one, and `p(x++/ / b)` and `p(a=x++/ !/f/ b)` no longer run on to
+  the closing `)` or the next attribute.
+- Razor: an unclosed `<script>` whose body starts with a `@* … *@` comment ends after the line
+  break that follows the comment, as in the Razor compiler (`<script>@**@` and a line break).
+- Razor: after a `@{ }` block and a line break, an unclosed element ends after the whitespace that
+  follows an `@` expression even when a `@@` and another expression came before, as in the Razor
+  compiler (`<script>@{}`, a line break and `@@@b@@@x `).
+- Pug: the error "Duplicate attribute" writes a name with a line break, tab or quote escaped
+  (`"a\nb"`), so every error message stays one line.
+- Pug: a `//-` comment inside the `#[` interpolation of a comment block no longer comes out as a
+  second `Comment` node before the block's own.
+
 ## 1.0.0
 
 ### Breaking

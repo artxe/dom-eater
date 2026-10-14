@@ -40,9 +40,17 @@ const reserved_words = new Set(
  * @returns {boolean}
  */
 export default function(state) {
-	if (state.last == "") return false
-	if (state.last_operand || operand_ends.includes(state.last)) return true
-	if (state.ident == "") return false
-	if (state.ident_before == "." || /^\d/.test(state.ident)) return true
+	if (state.last == "") {
+		return false
+	}
+	if (state.last_operand || operand_ends.includes(state.last)) {
+		return true
+	}
+	if (state.ident == "") {
+		return false
+	}
+	if (state.ident_before == "." || /^\d/.test(state.ident)) {
+		return true
+	}
 	return !reserved_words.has(state.ident)
 }

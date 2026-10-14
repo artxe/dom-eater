@@ -362,6 +362,11 @@ describe(
 							]
 						],
 						[
+							"@page \"\"",
+							[ "script 0-8", "string 6-8" ]
+						],
+						[ "@page \"\"\"", [ "script 0-5" ] ],
+						[
 							"@page \"/x\"\n@inject IFoo Foo\n@attribute [A(\"x\")]\n"
 										+ "@namespace A.B\n@addTagHelper *, A\n<p/>",
 							[
@@ -374,6 +379,34 @@ describe(
 								"string 42-45",
 								"string 6-10"
 							]
+						],
+						[
+							"@page $@\"/x\"",
+							[ "script 0-12", "string 8-12" ]
+						],
+						[
+							"@page @\"",
+							[ "script 0-5", "script 6-7" ]
+						],
+						[
+							"@page @\"/x\"",
+							[ "script 0-11", "string 7-11" ]
+						],
+						[
+							"@preservewhitespace false",
+							[ "script 0-25" ]
+						],
+						[
+							"@preservewhitespace x",
+							[ "script 0-19" ]
+						],
+						[
+							"@rendermode 1",
+							[ "script 0-11" ]
+						],
+						[
+							"@rendermode @(x)",
+							[ "script 0-16" ]
 						],
 						[
 							"@switch (a) { case 1: <p/> break; default: <b/> break; }",
@@ -391,6 +424,18 @@ describe(
 								"element 7-11 closed \"p\"",
 								"script 0-60"
 							]
+						],
+						[
+							"@typeparam T where U : class",
+							[ "script 0-18" ]
+						],
+						[
+							"@typeparam T x",
+							[ "script 0-12" ]
+						],
+						[
+							"@typeparam T;",
+							[ "script 0-13" ]
 						],
 						[
 							"@using (a) { <p/> } @lock (a) { <b/> }",
@@ -583,6 +628,124 @@ describe(
 								errors: []
 							}
 						)
+					}
+				)
+				it(
+					"reads a UTF-8 string literal as the route of a page",
+					() => {
+						expect(
+							razor_component("@page \"x\"u8")
+						).toStrictEqual(
+							{
+								ast: [
+									razor_node(
+										"@page \"x\"u8",
+										[ string_node("\"x\"", "double") ]
+									)
+								],
+								errors: []
+							}
+						)
+					}
+				)
+				it(
+					"reports a generic type constraint cut off after where at the end of the text",
+					() => {
+						expect(
+							razor_component("@typeparam T where")
+						).toStrictEqual(
+							{
+								ast: [
+									razor_node("@typeparam T where")
+								],
+								errors: [
+									{
+										end: 18,
+										message: "The type parameter of the constraint does not match.",
+										start: 18
+									}
+								]
+							}
+						)
+					}
+				)
+			}
+		)
+		describe(
+			"errors",
+			() => {
+				it.each(
+					[
+						[
+							"@page \"\"\"",
+							[
+								{
+									end: 9,
+									message: "The directive expects a quoted string.",
+									start: 6
+								}
+							]
+						],
+						[
+							"@page @\"",
+							[
+								{
+									end: 8,
+									message: "The directive expects a quoted string.",
+									start: 6
+								},
+								{
+									end: 8,
+									message: "Expected a code block, an expression or an identifier after \"@\".",
+									start: 7
+								}
+							]
+						],
+						[
+							"@preservewhitespace x",
+							[
+								{
+									end: 21,
+									message: "The directive expects a boolean.",
+									start: 20
+								}
+							]
+						],
+						[
+							"@rendermode 1",
+							[
+								{
+									end: 13,
+									message: "The directive expects an identifier or an expression.",
+									start: 12
+								}
+							]
+						],
+						[
+							"@typeparam T where U : class",
+							[
+								{
+									end: 20,
+									message: "The type parameter of the constraint does not match.",
+									start: 19
+								}
+							]
+						],
+						[
+							"@typeparam T x",
+							[
+								{
+									end: 14,
+									message: "Expected \"where\".",
+									start: 13
+								}
+							]
+						]
+					]
+				)(
+					"%j",
+					(source, expected) => {
+						expect(razor_component(source).errors).toStrictEqual(expected)
 					}
 				)
 			}

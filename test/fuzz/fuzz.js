@@ -287,7 +287,9 @@ export function check_seeds(mode, count, generate, problems_of) {
 				].join("\n")
 			)
 		}
-		if (!problems?.length) continue
+		if (!problems?.length) {
+			continue
+		}
 		if (failures.length >= 3) {
 			failures.push(
 				`SIM_MODE=${mode} SIM_SEED=${seed}`
@@ -352,24 +354,32 @@ export function entry_problems(name, source) {
 	 */
 	function check(result, include_text) {
 		if (Object.keys(result).sort()
-			.join() != "ast,errors") problems.push("result keys")
+			.join() != "ast,errors") {
+			problems.push("result keys")
+		}
 		try {
 			check_invariants(source, result, include_text)
 		} catch (error) {
 			problems.push(String(error))
 		}
 		for (const error of result.errors) {
-			if (typeof error.message != "string" || !sentence_regex.test(error.message)) problems.push(
-				`error message ${JSON.stringify(error.message)}`
-			)
+			if (typeof error.message != "string" || !sentence_regex.test(error.message)) {
+				problems.push(
+					`error message ${JSON.stringify(error.message)}`
+				)
+			}
 		}
 	}
 	check(first, true)
 	check(plain, false)
-	if (serialize(first, false) != serialize(again, false)) problems.push("nondeterministic")
-	if (serialize(first, true) != serialize(plain, false)) problems.push(
-		"include_text changes the result"
-	)
+	if (serialize(first, false) != serialize(again, false)) {
+		problems.push("nondeterministic")
+	}
+	if (serialize(first, true) != serialize(plain, false)) {
+		problems.push(
+			"include_text changes the result"
+		)
+	}
 	return problems
 }
 /**
@@ -392,23 +402,28 @@ export function fuzz_invariants(name, count) {
  */
 export function fuzz_source(name, seed) {
 	const next = random(seed)
-	const own = /** @type {string[]} */(fragments[name])/**/
+	/** @type {string[]} */
+	const own = fragments[name]
 	const bases = test_strings(name)
 	const mode = next()
 	if (mode < 0.3) {
 		let source = ""
 		const count = 1 + Math.floor(next() * 60)
-		for (let i = 0; i < count; i++) source += pick(
-			next,
-			next() < 0.6 ? own : common_fragments
-		)
+		for (let i = 0; i < count; i++) {
+			source += pick(
+				next,
+				next() < 0.6 ? own : common_fragments
+			)
+		}
 		return source
 	}
 	let source = pick(next, bases)
-	if (mode < 0.5) return source.slice(
-		0,
-		Math.floor(next() * (source.length + 1))
-	)
+	if (mode < 0.5) {
+		return source.slice(
+			0,
+			Math.floor(next() * (source.length + 1))
+		)
+	}
 	const mutations = 1 + Math.floor(next() * 6)
 	for (let i = 0; i < mutations; i++) {
 		const at = Math.floor(next() * (source.length + 1))
@@ -454,14 +469,20 @@ export function last_element(ast) {
 	 */
 	function visit(node) {
 		if (node.type == "Element") {
-			if (!last || node.start >= last.start) last = node
+			if (!last || node.start >= last.start) {
+				last = node
+			}
 			node.attributes.forEach(visit)
 			node.children.forEach(visit)
 		} else if (node.type == "Attribute") {
-			if (node.value !== true) visit(node.value)
+			if (node.value !== true) {
+				visit(node.value)
+			}
 		} else if (node.type == "Script") {
 			node.strings.forEach(visit)
-			if ("elements" in node) node.elements.forEach(visit)
+			if ("elements" in node) {
+				node.elements.forEach(visit)
+			}
 		} else if (node.type == "String") {
 			node.scripts.forEach(visit)
 		}
@@ -490,7 +511,9 @@ export function minimize(source, fails) {
 			}
 		}
 		if (!reduced) {
-			if (size == 1) break
+			if (size == 1) {
+				break
+			}
 			parts = Math.min(parts * 2, current.length)
 		}
 	}
@@ -541,12 +564,16 @@ function serialize(result, drop_text) {
 	return JSON.stringify(
 		result,
 		(key, value) => {
-			if (drop_text && key == "text") return undefined
-			if (value instanceof Error) return [
-				value.message,
-				Reflect.get(value, "start"),
-				Reflect.get(value, "end")
-			]
+			if (drop_text && key == "text") {
+				return undefined
+			}
+			if (value instanceof Error) {
+				return [
+					value.message,
+					Reflect.get(value, "start"),
+					Reflect.get(value, "end")
+				]
+			}
 			return value
 		}
 	)
@@ -563,8 +590,12 @@ export function sim_seeds(mode, count) {
 		SIM_SEED,
 		SIM_SEEDS
 	} = process.env
-	if (SIM_MODE && SIM_MODE != mode) return []
-	if (SIM_SEED) return [ Number(SIM_SEED) ]
+	if (SIM_MODE && SIM_MODE != mode) {
+		return []
+	}
+	if (SIM_SEED) {
+		return [ Number(SIM_SEED) ]
+	}
 	const from = Number(SIM_FROM ?? 1)
 	return Array.from(
 		{
@@ -579,9 +610,13 @@ export function sim_seeds(mode, count) {
  */
 export function test_strings(name) {
 	const cached = test_strings_cache.get(name)
-	if (cached) return cached
+	if (cached) {
+		return cached
+	}
 	const files = [ `${name}.test.js` ]
-	if (name == "parse_jsx" || name == "parse_script") files.push("script_syntax_cases.js")
+	if (name == "parse_jsx" || name == "parse_script") {
+		files.push("script_syntax_cases.js")
+	}
 	/** @type {Set<string>} */
 	const found = new Set()
 	for (const file of files) {
@@ -599,7 +634,9 @@ export function test_strings(name) {
 		 * @returns {void}
 		 */
 		function visit(node) {
-			if ((ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) && node.text.length >= 3) found.add(node.text)
+			if ((ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) && node.text.length >= 3) {
+				found.add(node.text)
+			}
 			if (ts.isTemplateExpression(node)) {
 				found.add(
 					node.head.text + node.templateSpans.map(

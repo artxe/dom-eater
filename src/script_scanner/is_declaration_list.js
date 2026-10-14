@@ -27,7 +27,7 @@ export default function(text, index, state) {
 		const declaration = token.kind == "word"
 			&& declaration_keywords.has(token.value)
 			&& binding_start_regex.test(
-				text[next_index(text, token.end)] ?? ""
+				/** @type {string} */(text[next_index(text, token.end)])/**/
 			)
 		if (declaration) {
 			result = true
@@ -40,6 +40,8 @@ export default function(text, index, state) {
 		operand_after = starts_operand(token)
 		i = token.start
 	}
-	for (const comma of commas) state.declaration_lists.set(comma, result)
+	for (const comma of commas) {
+		state.declaration_lists.set(comma, result)
+	}
 	return result
 }

@@ -10,7 +10,9 @@ import skip_line_comment from "./skip_line_comment.js"
  */
 export default function(text, errors, index, state) {
 	const next = text[index + 1]
-	if (next == "/") return skip_line_comment(text, index, state)
+	if (next == "/") {
+		return skip_line_comment(text, index, state)
+	}
 	if (next == "*") {
 		const close = text.indexOf("*/", index + 2)
 		if (close < 0) {
@@ -27,7 +29,9 @@ export default function(text, errors, index, state) {
 		state.comments.set(close + 2, index)
 		return close + 2
 	}
-	if (!is_expression_start(text, index, state)) return index + 1
+	if (!is_expression_start(text, index, state)) {
+		return index + 1
+	}
 	let in_class = false
 	for (let i = index + 1; i < text.length; i++) {
 		const char = text[i]
@@ -36,7 +40,9 @@ export default function(text, errors, index, state) {
 		} else if (char == "\n") {
 			break
 		} else if (in_class) {
-			if (char == "]") in_class = false
+			if (char == "]") {
+				in_class = false
+			}
 		} else if (char == "[") {
 			in_class = true
 		} else if (char == "/") {

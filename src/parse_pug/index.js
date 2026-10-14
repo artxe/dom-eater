@@ -20,6 +20,8 @@ import parse_pug_markup from "./parse_pug_markup.js"
  * if (ul?.type == "Element") ul.children.map(node => node.type) // [ "Script", "Element" ]
  */
 export default function(text, include_text) {
-	if (typeof text != "string") return not_string_result()
+	if (typeof text != "string") {
+		return not_string_result()
+	}
 	return parse_pug_markup(text, include_text, 0, false)
 }

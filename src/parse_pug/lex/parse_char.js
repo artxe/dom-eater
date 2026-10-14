@@ -1,4 +1,5 @@
 import is_js_whitespace from "../is_js_whitespace.js"
+import create_char_state from "./create_char_state.js"
 import is_operand_end from "./is_operand_end.js"
 import is_punctuator from "./is_punctuator.js"
 const char_kinds = Uint8Array.from(
@@ -72,7 +73,9 @@ const regexp_keywords = new Set(
  * @returns {void}
  */
 function append_history(state, char, code) {
-	if ((code == 43 || code == 45) && state.last != char) state.operand_before = is_operand_end(state)
+	if ((code == 43 || code == 45) && state.last != char) {
+		state.operand_before = is_operand_end(state)
+	}
 	state.undo_ident = state.ident
 	state.undo_ident_before = state.ident_before
 	state.undo_last = state.last
@@ -117,12 +120,29 @@ function append_history(state, char, code) {
 	state.separated = false
 }
 /**
+ * The state of acorn, which reads from here on what character-parser reads differently.
+ * @param {import("../../../private.js").PugCharState} state
+ * @param {string} char
+ * @returns {import("../../../private.js").PugCharState}
+ */
+function create_tail(state, char) {
+	const tail = create_char_state()
+	tail.last = char
+	tail.recent = char
+	tail.ternaries = state.ternaries
+	return tail
+}
+/**
  * @param {import("../../../private.js").PugCharState} state
  * @returns {boolean}
  */
 function is_regexp(state) {
-	if (state.last == ")") return false
-	if (state.last == "}" || is_punctuator(state.last)) return true
+	if (state.last == ")") {
+		return false
+	}
+	if (state.last == "}" || is_punctuator(state.last)) {
+		return true
+	}
 	return state.word != "" && regexp_keywords.has(state.word)
 }
 /**
@@ -130,9 +150,16 @@ function is_regexp(state) {
  * @param {string} char
  * @param {number} code
  * @param {string | undefined} current
+ * @param {boolean} after_regexp
  * @returns {boolean}
  */
-function parse_default(state, char, code, current) {
+function parse_default(
+	state,
+	char,
+	code,
+	current,
+	after_regexp
+) {
 	const stack = state.stack
 	if (code == 40) {
 		stack.push(")")
@@ -141,7 +168,9 @@ function parse_default(state, char, code, current) {
 	} else if (code == 123) {
 		stack.push("}")
 	} else if (code == 41 || code == 93 || code == 125) {
-		if (current !== char) return false
+		if (current !== char) {
+			return false
+		}
 		stack.pop()
 	} else if (state.recent == "/" && (code == 47 || code == 42)) {
 		state.ident = state.undo_ident
@@ -152,6 +181,10 @@ function parse_default(state, char, code, current) {
 		state.recent_kind = state.undo_recent_kind
 		state.separated = true
 		state.word = state.undo_word
+		if (after_regexp && !state.tail) {
+			// acorn reads this `/` or `*` as an operator, character-parser as a comment
+			state.tail = create_tail(state, char)
+		}
 		if (code == 47) {
 			stack.push("//")
 			state.line_comment = true
@@ -162,6 +195,10 @@ function parse_default(state, char, code, current) {
 	} else if (code == 47 && is_regexp(state)) {
 		stack.push("//g")
 		state.regexp_start = true
+		if (!state.tail && is_operand_end(state)) {
+			// acorn reads this `/` as a division, character-parser as a regexp
+			state.tail = create_tail(state, char)
+		}
 	} else if (code == 34 || code == 39 || code == 96) {
 		stack.push(char)
 	} else if (stack.length == 0 && code == 63) {
@@ -177,22 +214,41 @@ function parse_default(state, char, code, current) {
  * @param {string} char
  * @returns {boolean}
  */
-export default function(state, char) {
+export default function parse_char(state, char) {
+	if (state.tail) {
+		parse_char(state.tail, char)
+	}
+	const after_regexp = state.regexp_closed
+	state.regexp_closed = false
 	const code = char.charCodeAt(0)
 	const stack = state.stack
 	if (state.regexp_start) {
-		if (code == 47 || code == 42) stack.pop()
+		if (code == 47 || code == 42) {
+			stack.pop()
+		}
 		state.regexp_start = false
 	}
 	const current = stack[stack.length - 1]
 	if (current === undefined && code < 128 && plain_codes[code]) {
 		append_history(state, char, code)
 	} else if (current === undefined || current == ")" || current == "]" || current == "}") {
-		if (!parse_default(state, char, code, current)) return false
+		if (!parse_default(
+			state,
+			char,
+			code,
+			current,
+			after_regexp
+		)) {
+			return false
+		}
 	} else if (current == "//") {
-		if (code == 10) stack.pop()
+		if (code == 10) {
+			stack.pop()
+		}
 	} else if (current == "/**/") {
-		if (state.last_char == "*" && code == 47) stack.pop()
+		if (state.last_char == "*" && code == 47) {
+			stack.pop()
+		}
 	} else if (current == "`") {
 		if (code == 96 && !state.escaped) {
 			stack.pop()
@@ -213,8 +269,12 @@ export default function(state, char) {
 	} else if (code == (current == "//g" ? 47 : current.charCodeAt(0)) && !state.escaped) {
 		stack.pop()
 		append_history(state, char, code)
-		if (current == "//g") state.last_operand = true
+		if (current == "//g") {
+			state.last_operand = true
+			state.regexp_closed = true
+		}
 	} else {
+		append_history(state, char, code)
 		state.escaped = code == 92 && !state.escaped
 	}
 	state.last_char = char

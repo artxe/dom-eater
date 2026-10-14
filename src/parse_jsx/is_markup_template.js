@@ -12,7 +12,9 @@ const markup_comment_regex = /^\s*(?:html|svg)\s*$/i
  */
 export default function(text, index, state) {
 	let before = index - 1
-	while (whitespace_regex.test(text[before] ?? "")) before--
+	while (whitespace_regex.test(text[before] ?? "")) {
+		before--
+	}
 	const comment_start = state.comments.get(before + 1)
 	if (comment_start !== undefined) {
 		return text[comment_start + 1] == "*" && markup_comment_regex.test(
@@ -29,7 +31,9 @@ export default function(text, index, state) {
 		return key == "template" && current_bracket(state).kind == "{"
 	}
 	let tag_start = i
-	while (identifier_part_regex.test(text[tag_start - 1] ?? "")) tag_start--
+	while (identifier_part_regex.test(text[tag_start - 1] ?? "")) {
+		tag_start--
+	}
 	const tag = text.slice(tag_start, i + 1)
 	return tag == "html" || tag == "svg"
 }

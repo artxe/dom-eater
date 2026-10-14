@@ -18,6 +18,8 @@ import parse_script_markup from "./parse_script_markup.js"
  * parseJsx(`const App = () => <p className={cls}>Hi</p>`).ast.map(element => element.name) // [ "p" ]
  */
 export default function(text, include_text) {
-	if (typeof text != "string") return not_string_result()
+	if (typeof text != "string") {
+		return not_string_result()
+	}
 	return parse_script_markup(text, include_text, true)
 }

@@ -28,9 +28,13 @@ const expression_keywords = new Set(
  */
 function is_of_keyword(text, end, state) {
 	const i = previous_index(text, end - 1, state)
-	const char = text[i] ?? ""
-	if (char == "]" || char == "}") return true
-	if (!identifier_part_regex.test(char)) return false
+	const char = /** @type {string} */(text[i])/**/
+	if (char == ")" || char == "]" || char == "}") {
+		return true
+	}
+	if (!identifier_part_regex.test(char)) {
+		return false
+	}
 	const word = previous_word(text, i)
 	return word == "of"
 		? !is_of_keyword(text, i, state)
@@ -52,12 +56,20 @@ export default function(text, end, state) {
 			true,
 			state
 		)
-		if (arrow_async !== undefined) return word == "await" && arrow_async
-		if (word == "yield") return bracket.yield_keyword
-		if (bracket.await_keyword !== undefined || !bracket.script) return bracket.await_keyword ?? true
+		if (arrow_async !== undefined) {
+			return word == "await" && arrow_async
+		}
+		if (word == "yield") {
+			return bracket.yield_keyword
+		}
+		if (bracket.await_keyword !== undefined || !bracket.script) {
+			return bracket.await_keyword !== false
+		}
 		bracket.script.top_level_await = true
 		return bracket.script.module
 	}
-	if (word == "of") return bracket.for_head && is_of_keyword(text, end, state)
+	if (word == "of") {
+		return bracket.for_head && is_of_keyword(text, end, state)
+	}
 	return expression_keywords.has(word)
 }

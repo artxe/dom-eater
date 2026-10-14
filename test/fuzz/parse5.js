@@ -150,7 +150,9 @@ export function completion_problems(source, next) {
 			]
 		)
 	}
-	if (!quoted.length) return []
+	if (!quoted.length) {
+		return []
+	}
 	const [ start, end ] = pick(next, quoted)
 	const value_start = source.lastIndexOf("=", end) + 2
 	const cursor = value_start + Math.floor(next() * (end - value_start))
@@ -182,17 +184,25 @@ function dom_eater_items(source) {
 	 * @returns {void}
 	 */
 	function visit(node, parent) {
-		if (node.type != "Element" || node.subType == "close" || node.name.startsWith("!")) return
+		if (node.type != "Element" || node.subType == "close" || node.name.startsWith("!")) {
+			return
+		}
 		items.add(
 			`element ${node.start} ${node.name.toLowerCase()} parent=${parent}`
 		)
-		for (const attribute of node.attributes) items.add(
-			`attribute ${attribute.start}-${attribute.end} ${attribute.name.toLowerCase()}`
-		)
+		for (const attribute of node.attributes) {
+			items.add(
+				`attribute ${attribute.start}-${attribute.end} ${attribute.name.toLowerCase()}`
+			)
+		}
 		ends.set(node.start, node.end)
-		for (const child of node.children) visit(child, node.start)
+		for (const child of node.children) {
+			visit(child, node.start)
+		}
 	}
-	for (const node of ast) visit(node, -1)
+	for (const node of ast) {
+		visit(node, -1)
+	}
 	return { ends, items }
 }
 /**
@@ -211,14 +221,20 @@ export function html_document(seed) {
 		let source = tag == "root"
 			? ""
 			: `<${tag}${next() < 0.3 ? pick(next, attributes) : ""}>`
-		if (void_elements.has(tag)) return source
+		if (void_elements.has(tag)) {
+			return source
+		}
 		const kids = children[tag] ?? []
 		const count = depth > 5 || !kids.length ? 0 : Math.floor(next() * 4)
 		for (let i = 0; i < count && budget-- > 0; i++) {
-			if (!textless.has(tag) && next() < 0.2) source += "t"
+			if (!textless.has(tag) && next() < 0.2) {
+				source += "t"
+			}
 			source += generate(pick(next, kids), depth + 1)
 		}
-		if (tag != "root" && !(optional_end_tags.has(tag) && next() < 0.6)) source += `</${tag}>`
+		if (tag != "root" && !(optional_end_tags.has(tag) && next() < 0.6)) {
+			source += `</${tag}>`
+		}
 		return source
 	}
 	return generate("root", 0)
@@ -251,17 +267,25 @@ function parse5_items(source) {
 			)
 			for (const attribute of node.attrs) {
 				const range = location.attrs?.[attribute.name]
-				if (range) items.add(
-					`attribute ${range.startOffset}-${range.endOffset} ${attribute.name}`
-				)
+				if (range) {
+					items.add(
+						`attribute ${range.startOffset}-${range.endOffset} ${attribute.name}`
+					)
+				}
 			}
-			if (location.endTag) ends.set(start, location.endTag.endOffset)
+			if (location.endTag) {
+				ends.set(start, location.endTag.endOffset)
+			}
 			inner = start
 		}
 		if ("childNodes" in node) {
-			for (const child of node.childNodes) visit(child, inner)
+			for (const child of node.childNodes) {
+				visit(child, inner)
+			}
 		}
-		if ("content" in node) visit(node.content, inner)
+		if ("content" in node) {
+			visit(node.content, inner)
+		}
 	}
 	visit(root, -1)
 	return { ends, items }

@@ -9,10 +9,14 @@ export default function(text, index) {
 	let i = skip_run(text, index, "@") + 1
 	for (;;) {
 		const char = text[i]
-		if (char === undefined) break
+		if (char === undefined) {
+			break
+		}
 		i++
 		if (char == "\"") {
-			if (text[i] != "\"") break
+			if (text[i] != "\"") {
+				break
+			}
 			i++
 		}
 	}

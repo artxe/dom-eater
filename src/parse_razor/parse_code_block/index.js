@@ -208,7 +208,9 @@ const spacing = new Set([ "ws" ])
  * @returns {number}
  */
 function capture_line_end(ctx, index) {
-	if (ctx.nested || ctx.single_line) return index
+	if (ctx.nested || ctx.single_line) {
+		return index
+	}
 	const whitespace_end = skip_tokens(ctx, index, spacing)
 	const newline = csharp_token(ctx.text, whitespace_end)
 	return newline?.kind == "nl"
@@ -232,13 +234,17 @@ function is_complete_string(text, start, end) {
 	} else if (value == "\"\"" || value == "$\"\"") {
 		prefix = value.slice(0, -1)
 	} else {
-		const match = /^(\$*)("*)/.exec(value)
-		const opening = match?.[0] ?? ""
-		if (opening.length == value.length) return false
+		const match = /** @type {RegExpExecArray} */(/^(\$*)("*)/.exec(value))/**/
+		const opening = match[0]
+		if (opening.length == value.length) {
+			return false
+		}
 		prefix = opening
-		postfix = match?.[2] ?? ""
+		postfix = /** @type {string} */(match[2])/**/
 	}
-	if (value == prefix) return false
+	if (value == prefix) {
+		return false
+	}
 	return value.endsWith(postfix)
 		|| value.length >= postfix.length + 2 && /[Uu]8$/.test(value) && value.slice(0, -2).endsWith(postfix)
 }
@@ -293,9 +299,13 @@ function parse_directive(ctx, index, directive) {
 			)
 			return i
 		}
-		if (separator?.kind == "ws") i = skip_tokens(ctx, i, spacing_comments)
+		if (separator?.kind == "ws") {
+			i = skip_tokens(ctx, i, spacing_comments)
+		}
 		const token = csharp_token(text, i)
-		if (optional && (!token || token.kind == "nl")) break
+		if (optional && (!token || token.kind == "nl")) {
+			break
+		}
 		if (!token) {
 			add_error(
 				ctx,
@@ -377,7 +387,9 @@ function parse_directive(ctx, index, directive) {
 			const result = balance(ctx, i, { no_error: true })
 			i = result.end
 			const close = csharp_token(text, i)
-			if (result.ok && close?.kind == "]") i = close.end
+			if (result.ok && close?.kind == "]") {
+				i = close.end
+			}
 		} else if (kind == "generic_type_constraint") {
 			if (token.kind == "keyword" && word == "where") {
 				i = skip_tokens(ctx, token.end, spacing)
@@ -420,19 +432,25 @@ function parse_directive(ctx, index, directive) {
 	i = skip_tokens(ctx, i, spacing_comments)
 	if (directive.kind == "single") {
 		const semicolon = csharp_token(text, i)
-		if (semicolon?.kind == ";") i = skip_tokens(
-			ctx,
-			semicolon.end,
-			spacing_comments
-		)
+		if (semicolon?.kind == ";") {
+			i = skip_tokens(
+				ctx,
+				semicolon.end,
+				spacing_comments
+			)
+		}
 		const end = csharp_token(text, i)
-		if (end?.kind == "nl") return end.end
-		if (end) add_error(
-			ctx,
-			"Unexpected text after the directive.",
-			i,
-			end.end
-		)
+		if (end?.kind == "nl") {
+			return end.end
+		}
+		if (end) {
+			add_error(
+				ctx,
+				"Unexpected text after the directive.",
+				i,
+				end.end
+			)
+		}
 		return i
 	}
 	i = skip_tokens(ctx, i, spacing_all)
@@ -454,7 +472,9 @@ function parse_directive(ctx, index, directive) {
 		i = parse_statements(ctx, open.end)
 	}
 	const close = csharp_token(text, i)
-	if (close?.kind == "}") return capture_line_end(ctx, close.end)
+	if (close?.kind == "}") {
+		return capture_line_end(ctx, close.end)
+	}
 	add_error(
 		ctx,
 		"Expected \"}\".",
@@ -505,7 +525,9 @@ function parse_qualified_identifier(ctx, index) {
 	let expecting_dot = false
 	for (let token = csharp_token(ctx.text, i); token; token = csharp_token(ctx.text, i)) {
 		if (expecting_dot ? token.kind != "." : token.kind != "identifier") {
-			if (token.kind != "ws" && token.kind != "nl") return -1
+			if (token.kind != "ws" && token.kind != "nl") {
+				return -1
+			}
 			break
 		}
 		expecting_dot = !expecting_dot
@@ -523,12 +545,14 @@ function parse_qualified_identifier(ctx, index) {
 function parse_statement_body(ctx, index) {
 	const end = parse_statements(ctx, index + 1)
 	const close = csharp_token(ctx.text, end)
-	if (!close) add_error(
-		ctx,
-		"The code block is missing a closing \"}\".",
-		index,
-		end
-	)
+	if (!close) {
+		add_error(
+			ctx,
+			"The code block is missing a closing \"}\".",
+			index,
+			end
+		)
+	}
 	const block_end = close?.kind == "}"
 		? close.end
 		: end
@@ -547,17 +571,14 @@ function parse_statement_body(ctx, index) {
  */
 export default function(ctx, index) {
 	const { text } = ctx
-	let i = skip_tokens(ctx, index, spacing_all)
-	const transition = csharp_token(text, i)
-	if (!transition) return i
-	if (transition.kind == "string" && text[i] == "@") {
-		i++
-	} else if (transition.kind == "@") {
-		i = transition.end
-	}
+	const i = index + 1
 	const token = csharp_token(text, i)
-	if (token?.kind == "{") return parse_statement_body(ctx, i)
-	if (token?.kind == "(") return parse_explicit_expression(ctx, i)
+	if (token?.kind == "{") {
+		return parse_statement_body(ctx, i)
+	}
+	if (token?.kind == "(") {
+		return parse_explicit_expression(ctx, i)
+	}
 	if (token && is_word(token)) {
 		const word = text.slice(i, token.end)
 		const directive = (
@@ -565,7 +586,9 @@ export default function(ctx, index) {
 				? component_directives
 				: legacy_directives
 		).get(word)
-		if (directive) return parse_directive(ctx, i, directive)
+		if (directive) {
+			return parse_directive(ctx, i, directive)
+		}
 		const keyword = token.kind == "keyword"
 			? keyword_parser(word)
 			: undefined
@@ -579,12 +602,14 @@ export default function(ctx, index) {
 				? end
 				: capture_line_end(ctx, end)
 		}
-		if (word == "helper") add_error(
-			ctx,
-			"The \"helper\" directive is not supported.",
-			i,
-			token.end
-		)
+		if (word == "helper") {
+			add_error(
+				ctx,
+				"The \"helper\" directive is not supported.",
+				i,
+				token.end
+			)
+		}
 		return parse_implicit_expression(ctx, i)
 	}
 	add_error(

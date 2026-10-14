@@ -1,6 +1,8 @@
 .eslintcache
-coverage
 node_modules
 test/fuzz/razor/bin
 test/fuzz/razor/obj
 types
+.tmp/
+.claude/settings.local.json
+coverage/

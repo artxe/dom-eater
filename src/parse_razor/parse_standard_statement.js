@@ -54,11 +54,13 @@ export default function(ctx, index, encountered) {
 	let i = index
 	while (i < text.length) {
 		const bookmark = i
-		if (ctx.statement_ends.has(i)) return accept_until(
-			ctx,
-			bookmark,
-			statement_recovery_stops
-		)
+		if (ctx.statement_ends.has(i)) {
+			return accept_until(
+				ctx,
+				bookmark,
+				statement_recovery_stops
+			)
+		}
 		/** @type {number[]} */
 		const starts = []
 		let token = csharp_token(text, i)
@@ -68,7 +70,9 @@ export default function(ctx, index, encountered) {
 			token = csharp_token(text, i)
 		}
 		if (!token) {
-			for (const start of starts) ctx.statement_ends.add(start)
+			for (const start of starts) {
+				ctx.statement_ends.add(start)
+			}
 			return accept_until(
 				ctx,
 				bookmark,
@@ -78,7 +82,9 @@ export default function(ctx, index, encountered) {
 		if (token.kind == "(" || token.kind == "[") {
 			const result = try_balance_block(ctx, i)
 			i = result.end
-			if (!result.ok) return i
+			if (!result.ok) {
+				return i
+			}
 		} else if (token.kind == "{" || token.kind == "}") {
 			return i
 		} else if (token.kind == ";") {
@@ -107,10 +113,14 @@ export default function(ctx, index, encountered) {
 			}
 		} else if (text.slice(i, token.end) == "switch") {
 			i = accept_until(ctx, i, new Set([ "{" ]))
-			if (!csharp_token(text, i)) return i
+			if (!csharp_token(text, i)) {
+				return i
+			}
 			const result = try_balance_block(ctx, i)
 			i = result.end
-			if (!result.ok) return i
+			if (!result.ok) {
+				return i
+			}
 		} else {
 			i = token.end
 		}

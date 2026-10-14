@@ -18,6 +18,8 @@ import parse_razor_markup from "./parse_razor/parse_razor_markup.js"
  * if (button?.type == "Element") button.attributes.map(attribute => attribute.name) // [ "class", "@onclick" ]
  */
 export default function(text, include_text) {
-	if (typeof text != "string") return not_string_result()
+	if (typeof text != "string") {
+		return not_string_result()
+	}
 	return parse_razor_markup(text, include_text, true)
 }

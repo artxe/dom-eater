@@ -17,13 +17,19 @@ function parse_type_name(ctx, index) {
 				i = current.end
 				break
 			}
-			if (current.kind == "ws") i = current.end
+			if (current.kind == "ws") {
+				i = current.end
+			}
 			const inner = parse_type_name(ctx, i)
-			if (!inner.ok) return inner
+			if (!inner.ok) {
+				return inner
+			}
 			i = inner.end
 			for (const kind of [ "ws", "identifier", "ws", "," ]) {
 				const next = csharp_token(text, i)
-				if (next?.kind == kind) i = next.end
+				if (next?.kind == kind) {
+					i = next.end
+				}
 			}
 		}
 		return {
@@ -39,22 +45,32 @@ function parse_type_name(ctx, index) {
 	if (colons?.kind == "::") {
 		i = colons.end
 		const name = csharp_token(text, i)
-		if (is_word(name)) i = /** @type {import("../../private.js").RazorToken} */(name)/**/.end
+		if (is_word(name)) {
+			i = /** @type {import("../../private.js").RazorToken} */(name)/**/.end
+		}
 	}
 	if (csharp_token(text, i)?.kind == "<") {
 		i = balance(ctx, i, {}).end
 		const close = csharp_token(text, i)
-		if (close?.kind == ">") i = close.end
+		if (close?.kind == ">") {
+			i = close.end
+		}
 	}
 	const dot = csharp_token(text, i)
-	if (dot?.kind == ".") i = parse_type_name(ctx, dot.end).end
+	if (dot?.kind == ".") {
+		i = parse_type_name(ctx, dot.end).end
+	}
 	i = skip_nullable(ctx, i)
 	const whitespace = csharp_token(text, i)
-	if (whitespace?.kind == "ws" && csharp_token(text, whitespace.end)?.kind == "[") i = whitespace.end
+	if (whitespace?.kind == "ws" && csharp_token(text, whitespace.end)?.kind == "[") {
+		i = whitespace.end
+	}
 	while (csharp_token(text, i)?.kind == "[") {
 		i = balance(ctx, i, {}).end
 		const close = csharp_token(text, i)
-		if (close?.kind == "]") i = close.end
+		if (close?.kind == "]") {
+			i = close.end
+		}
 	}
 	return { end: i, ok: true }
 }
@@ -67,7 +83,9 @@ function skip_nullable(ctx, index) {
 	const { text } = ctx
 	let i = index
 	const whitespace = csharp_token(text, i)
-	if (whitespace?.kind == "ws" && csharp_token(text, whitespace.end)?.kind == "?") i = whitespace.end
+	if (whitespace?.kind == "ws" && csharp_token(text, whitespace.end)?.kind == "?") {
+		i = whitespace.end
+	}
 	const question = csharp_token(text, i)
 	return question?.kind == "?"
 		? question.end

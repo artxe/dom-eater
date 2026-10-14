@@ -29,7 +29,9 @@ function parse_member_access(ctx, index) {
 				? result.end
 				: accept_until(ctx, result.end, angle_stops)
 			const close = csharp_token(text, i)
-			if (close?.kind == right) i = close.end
+			if (close?.kind == right) {
+				i = close.end
+			}
 			continue
 		}
 		const next = csharp_token(text, token.end)
@@ -59,7 +61,9 @@ function parse_member_access(ctx, index) {
 			if (is_word(next)) {
 				return { end: token.end, more: true }
 			}
-			if (ctx.nested) i = token.end
+			if (ctx.nested) {
+				i = token.end
+			}
 		}
 		return { end: i, more: false }
 	}
@@ -73,9 +77,13 @@ export default function(ctx, index) {
 	let i = index
 	for (;;) {
 		const token = csharp_token(ctx.text, i)
-		if (token && is_word(token)) i = token.end
+		if (token && is_word(token)) {
+			i = token.end
+		}
 		const result = parse_member_access(ctx, i)
 		i = result.end
-		if (!result.more) return i
+		if (!result.more) {
+			return i
+		}
 	}
 }

@@ -23,7 +23,7 @@ import {
 	typescript_ranges
 } from "./typescript_ranges.js"
 import { parseJsx } from "dom-eater"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 describe(
 	"parseJsx",
 	() => {
@@ -48,9 +48,18 @@ describe(
 								"async function f() { return await (a) / 2, \"/\" }",
 								"async function f(): Promise<void> { await /'/ }",
 								"class A { *class() { yield /'/ } }",
+								"class A { @d async class() { await /'/ } }",
+								"class A { a() {} async class() { await /'/ } }",
+								"class A { async #m() { await /'/ } }",
+								"class A { async *m() { await /'/; yield /'/ } }",
 								"class A { async interface() { await /'/ } }",
 								"class A { async m(): Promise<void> { await /'/ } *n(): any { yield /'/ } }",
+								"class A { async m<T>() { await /'/ } }",
+								"class A { async m?() { await /'/ } }",
+								"class A { async m?(): T { await /'/ } }",
+								"class A { x = 1\n async class() { await /'/ } }",
 								"const f = (x): T => await / 2 + \"/\"",
+								"const f = async () => await /a/ + await /'/",
 								"const f = async (x): Promise<T> => await /'/",
 								"const f = async <T,>(x: T) => (y) => await / 2 + \"/\"",
 								"const f = async <T,>(x: T) => (y): T => await / 2 + \"/\"",
@@ -99,8 +108,10 @@ describe(
 								"a++ / 2, \"/\"",
 								"class C {} /'/.test(q)",
 								"do /'/.test(q); while (a)",
+								"for ((a) of /'/.exec(s)) {}",
 								"for ([a] of /'/.exec(s)) {}",
 								"for (const of of /'/.exec(s)) {}",
+								"for (of of /'/.exec(s)) {}",
 								"for (x of of / 2 + \"/\") {}",
 								"function f() { return function () {} / 2, \"/\" }",
 								"function f() { return!/'/.test(q) }",
@@ -137,6 +148,7 @@ describe(
 								"x = a??\"'\"",
 								"x = class {} / 2, \"/\"",
 								"x = f()! / 2, \"/\"",
+								"x = f(a.b / 2, \"/\")",
 								"x = f(async function () {} / 2, \"/\")",
 								"x = function () {} / 2, \"/\"",
 								"x = function(){} / 2, \"/\"",
@@ -169,6 +181,7 @@ describe(
 								"`s`\n{}\n/'/.test(q)",
 								"a: for (;;) { break a\n/'/.test(q) }",
 								"a: for (;;) { continue a\n/'/.test(q) }",
+								"a.b\n{}\n/'/.test(q)",
 								"a[0]\n{}\n/'/.test(q)",
 								"as: for (;;) { break as\n/'/.test(q) }",
 								"class A extends B<{ a: 1 }> {}\n/'/.test(q)",
@@ -184,6 +197,7 @@ describe(
 								"declare module \"m\"\nfunction f() {} /'/.test(q)",
 								"declare module \"m\" {}\n/'/.test(q)",
 								"declare module 'm'\nclass C {} /'/.test(q)",
+								"export as namespace N",
 								"export as namespace N\n/'/.test(q)",
 								"export declare function f(): void\nfunction q() {} /'/.test(q)",
 								"export default async function f() {} /'/.test(q)",
@@ -215,6 +229,7 @@ describe(
 								"let a = f`x`, b\n/'/.test(q)",
 								"let a = function () {}, b\n/'/.test(q)",
 								"let a = typeof b, c\n/'/.test(q)",
+								"let a!: T\n/'/.test(q)",
 								"let a: keyof B, c\n/'/.test(q)",
 								"namespace N.M {}\n/'/.test(q)",
 								"var a\n/'/.test(q)",
@@ -273,14 +288,20 @@ describe(
 								"interface I { <T>(x: T): T }\nx = <T>(a)</T>",
 								"interface J { new <T>(x: T): J }",
 								"interface K { m?<T>(x: T): T }",
+								"let a: [`x`]\n/'/.test(q)",
 								"let a: { /* } */ b: 1 }\n/'/.test(q)",
 								"let a: { /* } */ b: 1 } = c / 2, d = \"/\"",
 								"let a: { // }\n b: 1 }\n/'/.test(q)",
 								"let x: Foo<T>\n/'/.test(q)",
+								"type\nA = a / 2, \"/\"",
+								"type = a / 2, \"/\"",
 								"type A = \"a\" | \"b\"\n/'/.test(q)",
 								"type A = -1\n/'/.test(q)",
+								"type A = B<'\\''>\n/'/.test(q)",
+								"type A = B<`a${C}`>\n/'/.test(q)",
 								"type A = B[keyof C]\n/'/.test(q)",
 								"type A = `a${B}`\n/'/.test(q)",
+								"type A = `a\\`b`\n/'/.test(q)",
 								"type A = | \"a\" | \"b\"\n/'/.test(q)",
 								"type A<T = string> = T extends `${infer U}x` ? U : never\n/'/.test(q)",
 								"type A<T> = T extends string\n? \"a\"\n: { b: 1 }\n/'/.test(q)",
@@ -295,9 +316,11 @@ describe(
 								"x = <b>{a?.<b>(c)}</b>",
 								"x = a?.<b>(c) / 2, \"/\"",
 								"x = function (): { a: 1 } {} / 2, \"/\"",
+								"x = y as \"\\\"\" / 2, \"/\"",
 								"x = y as Map<(a: K) => V, W> / 2, \"/\"",
 								"x = y as Map<K, V> / 2, \"/\"",
 								"x = y as Map<{ k: 1 }, V> / 2, \"/\"",
+								"x = y as T",
 								"x = y satisfies A<B> / 2, \"/\""
 							]
 						)(
@@ -992,6 +1015,29 @@ describe(
 					}
 				)
 				it(
+					"ends the raw text of a script element only at its own close tag",
+					() => {
+						expect(
+							jsx(
+								"x = <script>\"</style>\"</script>"
+							)
+						).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"<script>\"</style>\"</script>",
+										"script",
+										"open",
+										[],
+										[ text_node("\"</style>\"") ]
+									)
+								],
+								errors: []
+							}
+						)
+					}
+				)
+				it(
 					"keeps HTML comments and the raw text of script and style elements",
 					() => {
 						expect(
@@ -1024,6 +1070,28 @@ describe(
 											)
 										]
 									)
+								],
+								errors: []
+							}
+						)
+					}
+				)
+				it(
+					"keeps empty script and style elements without children",
+					() => {
+						expect(
+							jsx(
+								"x = <script></script>; y = <style></style>"
+							)
+						).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"<script></script>",
+										"script",
+										"open"
+									),
+									element_node("<style></style>", "style", "open")
 								],
 								errors: []
 							}
@@ -1160,6 +1228,39 @@ describe(
 												"open",
 												[],
 												[ text_node("a") ]
+											)
+										]
+									)
+								],
+								errors: []
+							}
+						)
+					}
+				)
+				it(
+					"parses a single block as the content of a script or style element",
+					() => {
+						expect(
+							jsx(
+								"x = <style>{`.a { color: red }`}</style>"
+							)
+						).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"<style>{`.a { color: red }`}</style>",
+										"style",
+										"open",
+										[],
+										[
+											jsx_node(
+												"{`.a { color: red }`}",
+												[
+													string_node(
+														"`.a { color: red }`",
+														"backtick"
+													)
+												]
 											)
 										]
 									)
@@ -1366,11 +1467,43 @@ describe(
 								]
 							}
 						)
+						expect(jsx("x = <script>a < b")).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"<script>a < b",
+										"script",
+										"open",
+										[],
+										[ text_node("a < b") ]
+									)
+								],
+								errors: [
+									{
+										end: 17,
+										message: "The \"script\" element is not closed.",
+										start: 4
+									}
+								]
+							}
+						)
 					}
 				)
 				it(
 					"reports a block comment that is never closed",
 					() => {
+						expect(jsx("x = class /* b")).toStrictEqual(
+							{
+								ast: [],
+								errors: [
+									{
+										end: 14,
+										message: "The block comment is not closed.",
+										start: 10
+									}
+								]
+							}
+						)
 						expect(jsx("x = <p>{/* a</p>")).toStrictEqual(
 							{
 								ast: [
@@ -1507,6 +1640,36 @@ describe(
 					}
 				)
 				it(
+					"reports an HTML comment in children that is never closed",
+					() => {
+						expect(jsx("x = <div><!-- a")).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"<div><!-- a",
+										"div",
+										"open",
+										[],
+										[ comment_node("<!-- a") ]
+									)
+								],
+								errors: [
+									{
+										end: 15,
+										message: "The comment is not closed with \"-->\".",
+										start: 9
+									},
+									{
+										end: 15,
+										message: "The \"div\" element is not closed.",
+										start: 4
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
 					"reports unterminated top-level strings",
 					() => {
 						expect(jsx("a = \"b").errors).toStrictEqual(
@@ -1547,6 +1710,24 @@ describe(
 									end: 8,
 									message: "The template literal is not closed.",
 									start: 4
+								}
+							]
+						)
+						expect(jsx("x = y as 'b").errors).toStrictEqual(
+							[
+								{
+									end: 11,
+									message: "The single-quoted string is not closed.",
+									start: 9
+								}
+							]
+						)
+						expect(jsx("type A = `a").errors).toStrictEqual(
+							[
+								{
+									end: 11,
+									message: "The template literal is not closed.",
+									start: 9
 								}
 							]
 						)
@@ -1757,6 +1938,27 @@ describe(
 					}
 				)
 				it(
+					"rethrows errors other than a stack overflow",
+					() => {
+						const error = new TypeError("Injected.")
+						const spy = vi.spyOn(RegExp.prototype, "exec").mockImplementation(
+							() => {
+								throw error
+							}
+						)
+						/** @type {unknown} */
+						let thrown
+						try {
+							parseJsx("x = <p/>")
+						} catch (caught) {
+							thrown = caught
+						} finally {
+							spy.mockRestore()
+						}
+						expect(thrown).toBe(error)
+					}
+				)
+				it(
 					"returns nothing for empty input",
 					() => {
 						expect(jsx("")).toStrictEqual({ ast: [], errors: [] })
@@ -1837,6 +2039,19 @@ describe(
 										[],
 										[ jsx_node("{a<b ? 1 : 2}") ]
 									)
+								],
+								errors: []
+							}
+						)
+					}
+				)
+				it(
+					"does not take a tag with an error right after an element as its sibling",
+					() => {
+						expect(jsx("x = <a/><b c=>d</b>")).toStrictEqual(
+							{
+								ast: [
+									element_node("<a/>", "a", "closed")
 								],
 								errors: []
 							}
@@ -2009,6 +2224,43 @@ describe(
 				it.each(
 					[
 						[
+							"a keyword at the end of input",
+							"export"
+						],
+						[
+							"a line comment after a keyword at the end of input",
+							"x = class // c"
+						],
+						[
+							"a member name before a block at the start of the input",
+							"a.b\n{}"
+						],
+						[
+							"a namespace export cut off by the end of input",
+							"export as namespace"
+						],
+						[
+							"a type alias cut off after its name",
+							"type A"
+						],
+						[
+							"a type cut off inside braces",
+							"let a: { b"
+						],
+						[
+							"an optional chain cut off by the end of input",
+							"x = a?."
+						]
+					]
+				)(
+					"scans %s without errors",
+					(_, code) => {
+						expect(jsx(code)).toStrictEqual({ ast: [], errors: [] })
+					}
+				)
+				it.each(
+					[
+						[
 							"a block comment starting with a slash",
 							"x = /*/ <b/> */ <p/>"
 						],
@@ -2099,6 +2351,26 @@ describe(
 					}
 				)
 				it(
+					"takes a tag cut off by the end of input right after an element as its sibling",
+					() => {
+						expect(jsx("x = <a/><b>")).toStrictEqual(
+							{
+								ast: [
+									element_node("<a/>", "a", "closed"),
+									element_node("<b>", "b", "open")
+								],
+								errors: [
+									{
+										end: 11,
+										message: "The \"b\" element is not closed.",
+										start: 8
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
 					"tells regular expressions from divisions",
 					() => {
 						expect(
@@ -2124,6 +2396,19 @@ describe(
 								"x = a$ <b; y = c‌ <d; z = e‍ <f; w = <p/>"
 							)
 						).toStrictEqual(
+							{
+								ast: [
+									element_node("<p/>", "p", "closed")
+								],
+								errors: []
+							}
+						)
+					}
+				)
+				it(
+					"treats a member name at the start of the input as the end of an operand",
+					() => {
+						expect(jsx(".a <b; x = <p/>")).toStrictEqual(
 							{
 								ast: [
 									element_node("<p/>", "p", "closed")

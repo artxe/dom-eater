@@ -12,11 +12,10 @@ export default function(ctx, frames, index, mode, stop) {
 	let i = index
 	while (i < ctx.text.length) {
 		const token = html_token(ctx.text, i)
-		if (token && stop(token)) break
-		const end = parse_markup_node(ctx, frames, i, mode)
-		i = end > i
-			? end
-			: token?.end ?? i + 1
+		if (token && stop(token)) {
+			break
+		}
+		i = parse_markup_node(ctx, frames, i, mode)
 	}
 	return i
 }

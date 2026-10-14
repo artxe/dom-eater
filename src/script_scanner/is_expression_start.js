@@ -19,16 +19,24 @@ const statement_end_keywords = new Set(
  */
 function is_expression_start(text, index, state) {
 	const i = previous_index(text, index, state)
-	if (i < 0) return true
+	if (i < 0) {
+		return true
+	}
 	const recorded = state.expression_after.get(i + 1)
-	if (recorded !== undefined) return recorded
+	if (recorded !== undefined) {
+		return recorded
+	}
 	const char = /** @type {string} */(text[i])/**/
 	if (identifier_part_regex.test(char)) {
 		return is_keyword_before_expression(text, i, state) || is_statement_end(text, i, state)
 	}
-	if (char == "\"" || char == "'") return is_module_specifier(text, i, state)
+	if (char == "\"" || char == "'") {
+		return is_module_specifier(text, i, state)
+	}
 	if (char == ".") {
-		if (text[i - 1] == "?") return false
+		if (text[i - 1] == "?") {
+			return false
+		}
 		member_dot_regex.lastIndex = i
 		return member_dot_regex.test(text) || text[i - 1] == "."
 	}
@@ -37,7 +45,9 @@ function is_expression_start(text, index, state) {
 		return is_expression_start(text, i, state) || line_terminator_regex.test(text.slice(before + 1, i))
 	}
 	if (char == "+" || char == "-") {
-		if (text[i - 1] != char || text[i - 2] == char) return true
+		if (text[i - 1] != char || text[i - 2] == char) {
+			return true
+		}
 		const before = previous_index(text, i - 1, state)
 		return is_expression_start(text, i - 1, state) || line_terminator_regex.test(text.slice(before + 1, i - 1))
 	}
@@ -52,7 +62,10 @@ function is_expression_start(text, index, state) {
 function is_module_specifier(text, end, state) {
 	const i = previous_index(
 		text,
-		text.lastIndexOf(text[end] ?? "", end - 1),
+		text.lastIndexOf(
+			/** @type {string} */(text[end])/**/,
+			end - 1
+		),
 		state
 	)
 	const word = previous_word(text, i)
@@ -73,11 +86,17 @@ function is_statement_end(text, end, state) {
 	const word = previous_word(text, end)
 	if (!word) {
 		let start = end
-		while (identifier_part_regex.test(text[start] ?? "")) start--
+		while (identifier_part_regex.test(
+			/** @type {string} */(text[start])/**/
+		)) {
+			start--
+		}
 		const dot = previous_index(text, start + 1, state)
 		return text[dot] == "." && is_import_alias(text, dot, state)
 	}
-	if (statement_end_keywords.has(word)) return true
+	if (statement_end_keywords.has(word)) {
+		return true
+	}
 	const before = previous_index(text, end - word.length + 1, state)
 	const keyword = previous_word(text, before)
 	return keyword == "break"

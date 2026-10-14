@@ -20,7 +20,9 @@ function parse_string(text, start, end) {
 	const quote = text.indexOf("\"", start)
 	/** @type {[ number, number, number, number ][]} */
 	const holes = []
-	if (text[start] == "$" || text[quote - 1] == "$") interpolated_end(text, start, holes)
+	if (text[start] == "$" || text[quote - 1] == "$") {
+		interpolated_end(text, start, holes)
+	}
 	const suffix = end - quote > 3 && /"[Uu]8$/.test(text.slice(end - 3, end))
 	return {
 		end: suffix
@@ -64,11 +66,17 @@ function scan_code(text, start, end, markup) {
 	let last = start
 	let range = 0
 	for (let i = start; i < end;) {
-		while (range < ranges.length && /** @type {[ number, number, number ]} */(ranges[range])/**/[1] <= i) range++
+		while (range < ranges.length && /** @type {[ number, number, number ]} */(ranges[range])/**/[1] <= i) {
+			range++
+		}
 		const next_range = ranges[range]
 		if (next_range && next_range[0] <= i) {
 			let markup_end = next_range[1]
-			while (markup_end > next_range[0] && is_space(text[markup_end - 1] ?? "")) markup_end--
+			while (markup_end > next_range[0] && is_space(
+				/** @type {string} */(text[markup_end - 1])/**/
+			)) {
+				markup_end--
+			}
 			last = Math.max(last, markup_end, next_range[2])
 			i = next_range[1]
 			continue
@@ -76,12 +84,15 @@ function scan_code(text, start, end, markup) {
 		const limit = next_range
 			? Math.min(end, next_range[0])
 			: end
-		const token = csharp_token(text, i)
-		if (!token) break
-		if (token.kind == "string" && token.end <= limit && text.slice(i, token.end).includes("\"")) strings.push(
-			parse_string(text, i, token.end)
-		)
-		if (token.kind != "ws" && token.kind != "nl") last = Math.max(last, Math.min(token.end, limit))
+		const token = /** @type {import("../../private.js").RazorToken} */(csharp_token(text, i))/**/
+		if (token.kind == "string" && token.end <= limit && text.slice(i, token.end).includes("\"")) {
+			strings.push(
+				parse_string(text, i, token.end)
+			)
+		}
+		if (token.kind != "ws" && token.kind != "nl") {
+			last = Math.max(last, Math.min(token.end, limit))
+		}
 		i = token.end
 	}
 	return { last, strings }
@@ -113,7 +124,9 @@ export default function(ctx, index) {
 	].sort((a, b) => a.start - b.start)
 	let node_end = Math.max(index + 1, code.last)
 	script.elements.sort((a, b) => a.start - b.start)
-	for (const child of [ ...script.elements, ...strings ]) node_end = Math.max(node_end, child.end)
+	for (const child of [ ...script.elements, ...strings ]) {
+		node_end = Math.max(node_end, child.end)
+	}
 	return {
 		end,
 		node: {

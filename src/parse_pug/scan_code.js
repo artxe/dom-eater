@@ -29,7 +29,9 @@ export default function(text, errors, start, end, statement) {
 	let child_pre_index = 0
 	for (;;) {
 		const child_index = code.slice(child_pre_index).search(stop_code_regex)
-		if (child_index < 0) break
+		if (child_index < 0) {
+			break
+		}
 		const index = child_pre_index + child_index
 		if (code[index] == "/") {
 			child_pre_index = skip_slash(code, errors, index, state)
@@ -57,15 +59,19 @@ export default function(text, errors, start, end, statement) {
 		error.end += start
 		error.start += start
 	}
-	/** @type {import("../../public.js").AstNode[]} */
+	/** @type {(import("../../public.js").Script | import("../../public.js").String)[]} */
 	const pending = [ ...strings ]
 	for (let node = pending.pop(); node; node = pending.pop()) {
 		node.end += start
 		node.start += start
 		if (node.type == "String") {
-			for (const script of node.scripts) pending.push(script)
-		} else if (node.type == "Script") {
-			for (const string of node.strings) pending.push(string)
+			for (const script of node.scripts) {
+				pending.push(script)
+			}
+		} else {
+			for (const string of node.strings) {
+				pending.push(string)
+			}
 		}
 	}
 	return strings

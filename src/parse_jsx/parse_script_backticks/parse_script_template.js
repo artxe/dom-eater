@@ -64,7 +64,9 @@ export default function(
 	}
 	for (;;) {
 		const child_index = text.slice(child_pre_index).search(stop_script_template_regex)
-		if (child_index < 0) break
+		if (child_index < 0) {
+			break
+		}
 		const index = child_pre_index + child_index
 		if (text[index] == "}") {
 			return substitution(index + 1)
@@ -111,7 +113,9 @@ export default function(
 			)
 			strings.push(node)
 			if (markup) {
-				for (const element of parse_markup_template(text, errors, node)) elements.push(element)
+				for (const element of parse_markup_template(text, errors, node)) {
+					elements.push(element)
+				}
 			}
 			record_literal(node, state)
 			child_pre_index = node.end

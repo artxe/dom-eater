@@ -212,6 +212,25 @@ describe(
 						)
 					}
 				)
+				it(
+					"reports markup errors before a substitution",
+					() => {
+						expect(script("x = html`<div>${a}`")).toStrictEqual(
+							{
+								ast: [
+									element_node("<div>", "div", "open")
+								],
+								errors: [
+									{
+										end: 14,
+										message: "The \"div\" element is not closed.",
+										start: 9
+									}
+								]
+							}
+						)
+					}
+				)
 			}
 		)
 		describe(
@@ -296,6 +315,36 @@ describe(
 										+ " d = x ? template : `<b></b>`; e = /* css */ `<b></b>`; f = html.x`<b></b>`"
 							)
 						).toStrictEqual({ ast: [], errors: [] })
+					}
+				)
+				it(
+					"keeps a block attribute value as a Script with its strings",
+					() => {
+						expect(
+							script("x = html`<p a={\"b\"}></p>`")
+						).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"<p a={\"b\"}></p>",
+										"p",
+										"open",
+										[
+											attribute_node(
+												"a={\"b\"}",
+												"a",
+												script_node(
+													"{\"b\"}",
+													"block",
+													[ string_node("\"b\"", "double") ]
+												)
+											)
+										]
+									)
+								],
+								errors: []
+							}
+						)
 					}
 				)
 				it(
@@ -485,6 +534,10 @@ describe(
 						[
 							"a quoted template key",
 							"c = { \"template\": `<b class=\"x\"></b>` }"
+						],
+						[
+							"a single-quoted template key",
+							"c = { 'template': `<b class=\"x\"></b>` }"
 						],
 						[
 							"a svg tag",

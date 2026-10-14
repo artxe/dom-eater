@@ -7,7 +7,6 @@ import parse_markup_element from "../parse_markup_element.js"
 import parse_markup_node from "../parse_markup_node.js"
 import parse_markup_nodes from "../parse_markup_nodes.js"
 import parser_state from "../parser_state.js"
-import skip_html_whitespace from "../skip_html_whitespace.js"
 /**
  * @param {import("../../../private.js").RazorContext} ctx
  * @param {number} index
@@ -18,8 +17,6 @@ function parse_markup_in_code(ctx, index) {
 	let i = index
 	do {
 		const state = parser_state(ctx, i, "code")
-		if (state == "eof") break
-		const start = i
 		if (state == "tag") {
 			i = parse_markup_element(ctx, frames, i, "code")
 		} else {
@@ -32,7 +29,6 @@ function parse_markup_in_code(ctx, index) {
 					: "text"
 			)
 		}
-		if (i <= start) break
 	} while (i < ctx.text.length && frames.length > 1)
 	while (frames.length > 1) {
 		const outer = frames.length == 2
@@ -81,9 +77,12 @@ function parse_single_line_markup(ctx, index) {
 			token => token.kind == "ws" || token.kind == "nl"
 		)
 		const token = html_token(text, i)
-		if (token?.kind == "ws") i = token.end
+		if (token?.kind == "ws") {
+			i = token.end
+		}
 	} while (i < text.length && html_token(text, i)?.kind != "nl")
 	ctx.null_generate = false
+	ctx.null_generate_dirty = false
 	ctx.single_line = single_line
 	return {
 		end: html_token(text, i)?.end ?? i,
@@ -97,20 +96,14 @@ function parse_single_line_markup(ctx, index) {
  */
 export default function(ctx, index) {
 	const { text } = ctx
-	const i = skip_html_whitespace(text, index)
-	const token = html_token(text, i)
-	if (token?.kind == "<") return parse_markup_in_code(ctx, i)
-	if (token?.kind == "@") {
-		const next = html_token(text, i + 1)
-		if (next?.kind == "text" && text[i + 1] == ":") return parse_single_line_markup(ctx, next.end)
-		if (next?.kind == "<") return parse_markup_in_code(ctx, i + 1)
-		return { end: i + 1, nodes: [] }
+	if (text[index] == "<") {
+		return parse_markup_in_code(ctx, index)
 	}
-	if (token) add_error(
-		ctx,
-		"Markup in a code block must start with a tag.",
-		i,
-		token.end
-	)
-	return { end: i, nodes: [] }
+	if (text[index + 1] == ":") {
+		return parse_single_line_markup(
+			ctx,
+			/** @type {import("../../../private.js").RazorToken} */(html_token(text, index + 1))/**/.end
+		)
+	}
+	return parse_markup_in_code(ctx, index + 1)
 }

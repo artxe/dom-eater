@@ -10,7 +10,9 @@ export default function(ctx, frames, body_end) {
 	const element = /** @type {import("../../public.js").Element} */(frame.element)/**/
 	const { children } = frame
 	let kept = children.length
-	while (kept > 0 && /** @type {import("../../public.js").AstNode} */(children[kept - 1])/**/.end > body_end) kept--
+	while (kept > 0 && /** @type {import("../../public.js").AstNode} */(children[kept - 1])/**/.end > body_end) {
+		kept--
+	}
 	element.children = children.slice(0, kept)
 	ctx.bodies.set(
 		element,

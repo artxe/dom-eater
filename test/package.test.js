@@ -12,8 +12,12 @@ const package_path = join(
  * @returns {string[]}
  */
 function entry_paths(target) {
-	if (typeof target == "string") return [ posix.normalize(target) ]
-	if (target && typeof target == "object") return Object.values(target).flatMap(entry_paths)
+	if (typeof target == "string") {
+		return [ posix.normalize(target) ]
+	}
+	if (target && typeof target == "object") {
+		return Object.values(target).flatMap(entry_paths)
+	}
 	return []
 }
 /**
@@ -35,7 +39,8 @@ function packed_files() {
 			stdio: [ "ignore", "pipe", "ignore" ]
 		}
 	)
-	const [ result ] = /** @type {{ files: { path: string }[] }[]} */(JSON.parse(output))/**/
+	/** @type {{ files: { path: string }[] }[]} */
+	const [ result ] = JSON.parse(output)
 	return /** @type {{ files: { path: string }[] }} */(result)/**/.files.map(file => file.path)
 }
 describe(
@@ -44,19 +49,22 @@ describe(
 		it(
 			"ships every declaration the entries reach, and nothing private",
 			() => {
-				const manifest = /** @type {Record<string, unknown>} */(JSON.parse(
+				/** @type {Record<string, unknown>} */
+				const manifest = JSON.parse(
 					readFileSync(
 						join(package_path, "package.json"),
 						"utf8"
 					)
-				))/**/
+				)
 				const files = packed_files()
 				const packed = new Set(files)
 				for (const doc of [
 					"CHANGELOG.md",
 					"LICENSE",
 					"README.md"
-				]) assert.include(files, doc)
+				]) {
+					assert.include(files, doc)
+				}
 				for (const file of files) {
 					assert.notMatch(
 						file,
@@ -76,7 +84,9 @@ describe(
 					manifest["exports"]
 				].flatMap(entry_paths)
 				for (const entry of entries) {
-					if (existsSync(join(package_path, entry))) assert.isTrue(packed.has(entry), entry)
+					if (existsSync(join(package_path, entry))) {
+						assert.isTrue(packed.has(entry), entry)
+					}
 				}
 				const engines = /** @type {{ node?: string } | undefined} */(manifest["engines"])/**/
 				assert.isString(engines?.node, "engines.node")

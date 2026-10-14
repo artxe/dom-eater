@@ -14,7 +14,7 @@ import {
 	text_node
 } from "./helpers.js"
 import { parsePug } from "dom-eater"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 /**
  * @param {string} source
  * @returns {string[]}
@@ -40,21 +40,31 @@ function pug_items(source) {
 				items.push(
 					`attribute ${attribute.start}-${attribute.end} ${name} ${value} owner=${node.start}`
 				)
-				if (attribute.value !== true && attribute.value.subType != "unquoted") pending.push(
-					[ attribute.value, node.start, true ]
+				if (attribute.value !== true && attribute.value.subType != "unquoted") {
+					pending.push(
+						[ attribute.value, node.start, true ]
+					)
+				}
+			}
+			for (const child of node.children) {
+				pending.push([ child, node.start, false ])
+			}
+		} else if (node.type == "Script") {
+			if (!in_value) {
+				items.push(
+					`script ${node.start}-${node.end}`
 				)
 			}
-			for (const child of node.children) pending.push([ child, node.start, false ])
-		} else if (node.type == "Script") {
-			if (!in_value) items.push(
-				`script ${node.start}-${node.end}`
-			)
-			for (const string of node.strings) pending.push([ string, parent, true ])
+			for (const string of node.strings) {
+				pending.push([ string, parent, true ])
+			}
 		} else if (node.type == "String") {
 			items.push(
 				`string ${node.start}-${node.end}`
 			)
-			for (const script of node.scripts) pending.push([ script, parent, true ])
+			for (const script of node.scripts) {
+				pending.push([ script, parent, true ])
+			}
 		} else {
 			items.push(
 				`${node.type.toLowerCase()} ${node.start}-${node.end}`
@@ -97,6 +107,14 @@ describe(
 							]
 						],
 						[
+							"+m(class=\"x\")",
+							[
+								"attribute 3-12 \"class\" 9-12 owner=0",
+								"element 0 \"+m\" parent=-1",
+								"string 9-12"
+							]
+						],
+						[
 							"-\n  var a = \"x\"\n  var b = 'y'\np= a",
 							[
 								"element 30 \"p\" parent=-1",
@@ -104,6 +122,14 @@ describe(
 								"script 31-34",
 								"string 12-15",
 								"string 26-29"
+							]
+						],
+						[
+							"-\np a",
+							[
+								"element 2 \"p\" parent=-1",
+								"script 0-1",
+								"text 4-5"
 							]
 						],
 						[
@@ -138,6 +164,7 @@ describe(
 								"string 15-18"
 							]
 						],
+						[ ".\n  text", [ "text 4-8" ] ],
 						[
 							".a\n  .b\n    .c text",
 							[
@@ -161,6 +188,10 @@ describe(
 							]
 						],
 						[
+							"//\n  a #{b} c",
+							[ "comment 0-13" ]
+						],
+						[
 							"// shown\n  also shown\np after",
 							[
 								"comment 0-21",
@@ -176,10 +207,12 @@ describe(
 								"text 33-40"
 							]
 						],
+						[ ":a:b text", [ "text 5-9" ] ],
 						[
 							":markdown-it\n  # Title #{x}\n  body",
 							[ "text 15-27", "text 30-34" ]
 						],
+						[ ":md(a=1) text", [ "text 9-13" ] ],
 						[
 							"<div class=\"raw\">\n  p inner\n</div>",
 							[
@@ -187,6 +220,14 @@ describe(
 								"text 0-17",
 								"text 22-27",
 								"text 28-34"
+							]
+						],
+						[
+							"<div>\n- a()\n</div>",
+							[
+								"script 6-11",
+								"text 0-5",
+								"text 12-18"
 							]
 						],
 						[
@@ -225,8 +266,23 @@ describe(
 							]
 						],
 						[
+							"block // c",
+							[
+								"element 0 \"block\" parent=-1",
+								"text 6-10"
+							]
+						],
+						[
 							"block content // comment",
 							[ "comment 14-24" ]
+						],
+						[
+							"canvas\nfooter\nyoutube",
+							[
+								"element 0 \"canvas\" parent=-1",
+								"element 14 \"youtube\" parent=-1",
+								"element 7 \"footer\" parent=-1"
+							]
 						],
 						[
 							"case kind\n  when \"a\"\n    p.a A\n  when \"b\": p.b B\n  when \"c:d\"\n    p c\n"
@@ -378,6 +434,13 @@ describe(
 								"text 56-63"
 							]
 						],
+						[
+							"include a.pug\n  p b",
+							[
+								"element 16 \"p\" parent=-1",
+								"text 18-19"
+							]
+						],
 						[ "include:markdown ./a.md", [] ],
 						[
 							"input(type=\"checkbox\" checked disabled=false)",
@@ -484,6 +547,13 @@ describe(
 							]
 						],
 						[
+							"p ",
+							[
+								"element 0 \"p\" parent=-1",
+								"text 1-2"
+							]
+						],
+						[
 							"p !{raw} and #{a ? 'b' : 'c'}",
 							[
 								"element 0 \"p\" parent=-1",
@@ -543,6 +613,14 @@ describe(
 							]
 						],
 						[
+							"p #{a} #{b}",
+							[
+								"element 0 \"p\" parent=-1",
+								"script 7-11",
+								"text 2-7"
+							]
+						],
+						[
 							"p a]b",
 							[
 								"element 0 \"p\" parent=-1",
@@ -593,6 +671,14 @@ describe(
 								"attribute 1-26 \"\" 1-26 owner=0",
 								"element 0 \"p\" parent=-1",
 								"string 21-24"
+							]
+						],
+						[
+							"p&attributes[{a: \"b\"}]",
+							[
+								"attribute 1-22 \"\" 1-22 owner=0",
+								"element 0 \"p\" parent=-1",
+								"string 17-20"
 							]
 						],
 						[
@@ -684,6 +770,14 @@ describe(
 							]
 						],
 						[
+							"p(a=(b) / 2 c)",
+							[
+								"attribute 12-13 \"c\" true owner=0",
+								"attribute 2-11 \"a\" 4-11 owner=0",
+								"element 0 \"p\" parent=-1"
+							]
+						],
+						[
 							"p(a=(x) => \"y\" b)",
 							[
 								"attribute 15-16 \"b\" true owner=0",
@@ -696,6 +790,59 @@ describe(
 							"p(a=++ b)",
 							[
 								"attribute 2-8 \"a\" 4-8 owner=0",
+								"element 0 \"p\" parent=-1"
+							]
+						],
+						[
+							"p(a=x++/e/ b)",
+							[
+								"attribute 2-12 \"a\" 4-12 owner=0",
+								"element 0 \"p\" parent=-1"
+							]
+						],
+						[
+							"p(a=a[0]/e/ b)",
+							[
+								"attribute 2-13 \"a\" 4-13 owner=0",
+								"element 0 \"p\" parent=-1"
+							]
+						],
+						[
+							"p(a=x--/e/g b)",
+							[
+								"attribute 12-13 \"b\" true owner=0",
+								"attribute 2-11 \"a\" 4-11 owner=0",
+								"element 0 \"p\" parent=-1"
+							]
+						],
+						[
+							"p(a=x++/ /f/ b)",
+							[
+								"attribute 13-14 \"b\" true owner=0",
+								"attribute 2-12 \"a\" 4-12 owner=0",
+								"element 0 \"p\" parent=-1"
+							]
+						],
+						[
+							"p(a=x++/ /f g/ b)",
+							[
+								"attribute 15-16 \"b\" true owner=0",
+								"attribute 2-14 \"a\" 4-14 owner=0",
+								"element 0 \"p\" parent=-1"
+							]
+						],
+						[
+							"p(a=x++/ /f/ /g/ b)",
+							[
+								"attribute 2-18 \"a\" 4-18 owner=0",
+								"element 0 \"p\" parent=-1"
+							]
+						],
+						[
+							"p(a=x++/e/ /f/ b)",
+							[
+								"attribute 15-16 \"b\" true owner=0",
+								"attribute 2-14 \"a\" 4-14 owner=0",
 								"element 0 \"p\" parent=-1"
 							]
 						],
@@ -720,6 +867,13 @@ describe(
 							[
 								"attribute 10-11 \"b\" true owner=0",
 								"attribute 2-9 \"a\" 4-9 owner=0",
+								"element 0 \"p\" parent=-1"
+							]
+						],
+						[
+							"p(a=b + /* c */ d)",
+							[
+								"attribute 2-17 \"a\" 4-17 owner=0",
 								"element 0 \"p\" parent=-1"
 							]
 						],
@@ -815,6 +969,14 @@ describe(
 							]
 						],
 						[
+							"p(a=x  b)",
+							[
+								"attribute 2-6 \"a\" 4-6 owner=0",
+								"attribute 7-8 \"b\" true owner=0",
+								"element 0 \"p\" parent=-1"
+							]
+						],
+						[
 							"p(class=\"a\") #[b(class=\"c\")]",
 							[
 								"attribute 17-26 \"class\" 23-26 owner=15",
@@ -854,11 +1016,27 @@ describe(
 							]
 						],
 						[
+							"p(title=`a\\`b` c)",
+							[
+								"attribute 15-16 \"c\" true owner=0",
+								"attribute 2-14 \"title\" 8-14 owner=0",
+								"element 0 \"p\" parent=-1",
+								"string 8-14"
+							]
+						],
+						[
 							"p.\n    four\n  two",
 							[
 								"element 0 \"p\" parent=-1",
 								"text 14-17",
 								"text 5-11"
+							]
+						],
+						[
+							"p.\n  a\n  ",
+							[
+								"element 0 \"p\" parent=-1",
+								"text 5-6"
 							]
 						],
 						[
@@ -871,12 +1049,29 @@ describe(
 							]
 						],
 						[
+							"p.\n  a #[b c] d",
+							[
+								"element 0 \"p\" parent=-1",
+								"element 9 \"b\" parent=0",
+								"text 11-12",
+								"text 13-15",
+								"text 5-7"
+							]
+						],
+						[
 							"p.\n  line #{a}\n  line two",
 							[
 								"element 0 \"p\" parent=-1",
 								"script 10-14",
 								"text 17-25",
 								"text 5-10"
+							]
+						],
+						[
+							"p.  \n  a",
+							[
+								"element 0 \"p\" parent=-1",
+								"text 7-8"
 							]
 						],
 						[
@@ -898,6 +1093,13 @@ describe(
 						[
 							"p/",
 							[ "element 0 \"p\" parent=-1" ]
+						],
+						[
+							"p: <b>x</b>",
+							[
+								"element 0 \"p\" parent=-1",
+								"text 3-11"
+							]
 						],
 						[
 							"p: span.a: b text",
@@ -1019,6 +1221,28 @@ describe(
 			"attributes",
 			() => {
 				it(
+					"ends expression values after non-ASCII identifier characters but not after other characters",
+					() => {
+						expect(pug("p(a=é b c=€ d)")).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"p(a=é b c=€ d)",
+										"p",
+										"open",
+										[
+											attribute_node("a=é", "a", pug_node("é")),
+											attribute_node("b", "b"),
+											attribute_node("c=€ d", "c", pug_node("€ d"))
+										]
+									)
+								],
+								errors: []
+							}
+						)
+					}
+				)
+				it(
 					"ends expression values where the Pug lexer ends them",
 					() => {
 						expect(pug("p(a=x + y z=1 b=c++, d)")).toStrictEqual(
@@ -1039,6 +1263,110 @@ describe(
 								errors: []
 							}
 						)
+					}
+				)
+				it(
+					"keeps reading an expression value after a line comment",
+					() => {
+						expect(pug("p(a=b + // c\n d)")).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"p(a=b + // c\n d)",
+										"p",
+										"open",
+										[
+											attribute_node(
+												"a=b + // c\n d",
+												"a",
+												pug_node("b + // c\n d")
+											)
+										]
+									)
+								],
+								errors: []
+							}
+						)
+					}
+				)
+				it.each(
+					[
+						[
+							"p(a=/b + // c\n d)",
+							[ "a=/b + // c\n", "d" ]
+						],
+						[
+							"p(a=/b + // c\n d e)",
+							[ "a=/b + // c\n", "d", "e" ]
+						],
+						[
+							"p(a=/b + // c\n d, e)",
+							[ "a=/b + // c\n", "d", "e" ]
+						],
+						[
+							"p(a=/b + // c\n, e)",
+							[ "a=/b + // c\n", "e" ]
+						],
+						[
+							"p(a=/b + // c\n + d e)",
+							[ "a=/b + // c\n + d", "e" ]
+						],
+						[
+							"p(a=/b + // c / d\n e)",
+							[ "a=/b + // c / d\n", "e" ]
+						],
+						[
+							"p(a=/b + // c / /d/\n e)",
+							[ "a=/b + // c / /d/\n", "e" ]
+						],
+						[
+							"p(a=/b + // c +\n d)",
+							[ "a=/b + // c +\n d" ]
+						],
+						[
+							"p(a=/b + // /c// d\n e)",
+							[ "a=/b + // /c// d\n", "e" ]
+						],
+						[
+							"p(a=/b//c\n d)",
+							[ "a=/b//c\n", "d" ]
+						],
+						[
+							"p(a=x ? /b// c\n : d)",
+							[ "a=x ? /b// c\n : d" ]
+						],
+						[
+							"p(x++/ / b)",
+							[ "x++/", "/", "b" ]
+						],
+						[
+							"p(a=x++/ !/f/ b)",
+							[ "a=x++/ !/f/", "b" ]
+						],
+						[
+							"p(a=x++/-  /f/ /g/ b)",
+							[ "a=x++/-  /f/ /g/ b" ]
+						],
+						[
+							"p(a=x++/ !/b// c\n d)",
+							[ "a=x++/ !/b// c\n", "d" ]
+						],
+						[
+							"p(a=/b +` // /c// d\n/re/ e)",
+							[ "a=/b +` // /c// d\n/re/ e" ]
+						]
+					]
+				)(
+					"reads slashes of an attribute value the way acorn does in %j",
+					(source, expected) => {
+						const [ element ] = parsePug(source).ast
+						expect(
+							element?.type == "Element"
+								? element.attributes.map(
+									attribute => source.slice(attribute.start, attribute.end)
+								)
+								: []
+						).toStrictEqual(expected)
 					}
 				)
 				it(
@@ -1177,6 +1505,38 @@ describe(
 			"code",
 			() => {
 				it(
+					"ends a when expression with an unclosed bracket at the line end",
+					() => {
+						expect(
+							pug("case a\n  when (b\n    p")
+						).toStrictEqual(
+							{
+								ast: [
+									pug_node("case a"),
+									pug_node("when (b"),
+									element_node("p", "p", "open")
+								],
+								errors: []
+							}
+						)
+					}
+				)
+				it(
+					"ends code and conditions before trailing whitespace",
+					() => {
+						expect(pug("- a  \nif b  \n  p")).toStrictEqual(
+							{
+								ast: [
+									pug_node("- a"),
+									pug_node("if b"),
+									element_node("p", "p", "open")
+								],
+								errors: []
+							}
+						)
+					}
+				)
+				it(
 					"finds the strings of case, when and each lines",
 					() => {
 						expect(
@@ -1215,6 +1575,48 @@ describe(
 										[],
 										[ pug_node("= item") ]
 									)
+								],
+								errors: []
+							}
+						)
+					}
+				)
+				it(
+					"keeps comments and when lines without a block in case blocks",
+					() => {
+						expect(
+							pug(
+								"case a\n  // b\n  when c\n  when d\n    p"
+							)
+						).toStrictEqual(
+							{
+								ast: [
+									pug_node("case a"),
+									comment_node("// b"),
+									pug_node("when c"),
+									pug_node("when d"),
+									element_node("p", "p", "open")
+								],
+								errors: []
+							}
+						)
+					}
+				)
+				it(
+					"keeps else if, else and while lines without a block",
+					() => {
+						expect(
+							pug(
+								"if a\n  p\nelse if b\nelse\nwhile c"
+							)
+						).toStrictEqual(
+							{
+								ast: [
+									pug_node("if a"),
+									element_node("p", "p", "open"),
+									pug_node("else if b"),
+									pug_node("else"),
+									pug_node("while c")
 								],
 								errors: []
 							}
@@ -1342,6 +1744,30 @@ describe(
 					}
 				)
 				it(
+					"ends an attribute typed up to its \"=\" there",
+					() => {
+						expect(pug("p(a=")).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"p(a=",
+										"p",
+										"open",
+										[ attribute_node("a=", "a") ]
+									)
+								],
+								errors: [
+									{
+										end: 4,
+										message: "The input ended before the closing \")\".",
+										start: 1
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
 					"ends an element typed at the end of the text there",
 					() => {
 						expect(pug("ul\n  li(class=\"a")).toStrictEqual(
@@ -1378,6 +1804,608 @@ describe(
 										end: 16,
 										message: "The double-quoted string is not closed.",
 										start: 14
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
+					"keeps the message of a duplicate attribute on one line",
+					() => {
+						expect(
+							pug("p(\"a\nb\"=1 \"a\nb\"=2)").errors
+						).toStrictEqual(
+							[
+								{
+									end: 17,
+									message: "Duplicate attribute \"a\\nb\" is not allowed.",
+									start: 10
+								}
+							]
+						)
+					}
+				)
+				it(
+					"leaves a comment inside a comment block in the comment",
+					() => {
+						expect(pug("//\n #[//-")).toStrictEqual(
+							{
+								ast: [ comment_node("//\n #[//-") ],
+								errors: [
+									{
+										end: 9,
+										message: "End of line was reached with no closing bracket for interpolation.",
+										start: 4
+									},
+									{
+										end: 9,
+										message: "Did not expect \"]\" here.",
+										start: 9
+									},
+									{
+										end: 9,
+										message: "Expected \"]\", but found the end of a text block.",
+										start: 9
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
+					"reports &attributes without a bracket",
+					() => {
+						expect(pug("p&attributes")).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"p&attributes",
+										"p",
+										"open",
+										[
+											attribute_node(
+												"&attributes",
+												"",
+												pug_node("&attributes")
+											)
+										]
+									)
+								],
+								errors: [
+									{
+										end: 12,
+										message: "The start character must be \"(\", \"{\" or \"[\".",
+										start: 12
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
+					"reports a block expansion with nothing after it",
+					() => {
+						expect(pug("p: ")).toStrictEqual(
+							{
+								ast: [
+									element_node("p:", "p", "open")
+								],
+								errors: [
+									{
+										end: 3,
+										message: "Did not expect the end of the input here.",
+										start: 3
+									}
+								]
+							}
+						)
+						expect(pug("p: \nq")).toStrictEqual(
+							{
+								ast: [
+									element_node("p:", "p", "open"),
+									element_node("q", "q", "open")
+								],
+								errors: [
+									{
+										end: 4,
+										message: "Did not expect a line break here.",
+										start: 4
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
+					"reports a tag followed by something other than text, code, \":\", \"/\" or a line break",
+					() => {
+						expect(pug("p+m")).toStrictEqual(
+							{
+								ast: [
+									element_node("p", "p", "open"),
+									element_node("+m", "+m", "open")
+								],
+								errors: [
+									{
+										end: 3,
+										message: "Expected text, code, \":\", \"/\", a line break or the end of the input after the tag, "
+											+ "but found a mixin call.",
+										start: 1
+									}
+								]
+							}
+						)
+						expect(pug("+m+n")).toStrictEqual(
+							{
+								ast: [
+									element_node("+m", "+m", "open"),
+									element_node("+n", "+n", "open")
+								],
+								errors: [
+									{
+										end: 4,
+										message: "Expected text, code, \":\", a line break or the end of the input after the tag, "
+											+ "but found a mixin call.",
+										start: 2
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
+					"reports an each-of value that is neither an identifier nor a pair",
+					() => {
+						expect(pug("each a.b of c\n  p")).toStrictEqual(
+							{
+								ast: [
+									pug_node("each a.b of c"),
+									element_node("p", "p", "open")
+								],
+								errors: [
+									{
+										end: 12,
+										message: "The value variable for each must either be a valid identifier (e.g. \"item\") "
+											+ "or a pair of identifiers in square brackets (e.g. \"[key, value]\").",
+										start: 0
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
+					"reports attribute names followed by text instead of \"=\"",
+					() => {
+						expect(pug("div(\"foo\"bar)")).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"div(\"foo\"bar)",
+										"div",
+										"open",
+										[
+											attribute_node("\"foo\"", "foo"),
+											attribute_node("bar", "bar")
+										]
+									)
+								],
+								errors: [
+									{
+										end: 10,
+										message: "Expected \"=\" after the attribute name, but found \"b\".",
+										start: 9
+									}
+								]
+							}
+						)
+						expect(pug("p(a!b)")).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"p(a!b)",
+										"p",
+										"open",
+										[
+											attribute_node("a", "a"),
+											attribute_node("b", "b")
+										]
+									)
+								],
+								errors: [
+									{
+										end: 4,
+										message: "Expected \"=\" after \"!\".",
+										start: 3
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
+					"reports blocks where Pug does not allow them",
+					() => {
+						expect(pug("= a\n  p")).toStrictEqual(
+							{
+								ast: [
+									pug_node("= a"),
+									element_node("p", "p", "open")
+								],
+								errors: [
+									{
+										end: 6,
+										message: "Buffered code cannot have a block attached to it.",
+										start: 6
+									}
+								]
+							}
+						)
+						expect(pug("include a.txt\n  p")).toStrictEqual(
+							{
+								ast: [ element_node("p", "p", "open") ],
+								errors: [
+									{
+										end: 16,
+										message: "Raw inclusion cannot contain a block.",
+										start: 16
+									}
+								]
+							}
+						)
+						expect(pug("block")).toStrictEqual(
+							{
+								ast: [],
+								errors: [
+									{
+										end: 5,
+										message: "Anonymous blocks are not allowed unless they are part of a mixin.",
+										start: 0
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
+					"reports case, when and while without an expression",
+					() => {
+						expect(pug("case\n  when a\n    p")).toStrictEqual(
+							{
+								ast: [
+									pug_node("case"),
+									pug_node("when a"),
+									element_node("p", "p", "open")
+								],
+								errors: [
+									{
+										end: 4,
+										message: "\"case\" is missing an expression.",
+										start: 0
+									}
+								]
+							}
+						)
+						expect(pug("case a\n  when\n    p")).toStrictEqual(
+							{
+								ast: [
+									pug_node("case a"),
+									pug_node("when"),
+									element_node("p", "p", "open")
+								],
+								errors: [
+									{
+										end: 13,
+										message: "\"when\" is missing an expression.",
+										start: 9
+									}
+								]
+							}
+						)
+						expect(pug("while\n  p")).toStrictEqual(
+							{
+								ast: [
+									pug_node("while"),
+									element_node("p", "p", "open")
+								],
+								errors: [
+									{
+										end: 5,
+										message: "\"while\" is missing an expression.",
+										start: 0
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
+					"reports class names and ids that are not valid",
+					() => {
+						expect(pug("p#")).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"p#",
+										"p",
+										"open",
+										[ attribute_node("#", "id") ]
+									)
+								],
+								errors: [
+									{
+										end: 2,
+										message: "\"\" is not a valid ID.",
+										start: 1
+									}
+								]
+							}
+						)
+						expect(pug("p.$")).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"p.$",
+										"p",
+										"open",
+										[
+											attribute_node(
+												".$",
+												"class",
+												string_node("$", "unquoted")
+											)
+										]
+									)
+								],
+								errors: [
+									{
+										end: 3,
+										message: "\"$\" is not a valid class name. Class names can only contain \"_\", \"-\", a-z and 0-9, "
+											+ "and must contain at least one of \"_\" or a-z.",
+										start: 1
+									}
+								]
+							}
+						)
+						expect(pug("p.1")).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"p.1",
+										"p",
+										"open",
+										[
+											attribute_node(
+												".1",
+												"class",
+												string_node("1", "unquoted")
+											)
+										]
+									)
+								],
+								errors: [
+									{
+										end: 3,
+										message: "Class names must contain at least one letter or underscore.",
+										start: 1
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
+					"reports duplicate attributes",
+					() => {
+						expect(pug("p(a=1 a=2)")).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"p(a=1 a=2)",
+										"p",
+										"open",
+										[
+											attribute_node("a=1", "a", pug_node("1")),
+											attribute_node("a=2", "a", pug_node("2"))
+										]
+									)
+								],
+								errors: [
+									{
+										end: 9,
+										message: "Duplicate attribute \"a\" is not allowed.",
+										start: 6
+									}
+								]
+							}
+						)
+						expect(pug("p#a#b")).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"p#a#b",
+										"p",
+										"open",
+										[
+											attribute_node(
+												"#a",
+												"id",
+												string_node("a", "unquoted")
+											),
+											attribute_node(
+												"#b",
+												"id",
+												string_node("b", "unquoted")
+											)
+										]
+									)
+								],
+								errors: [
+									{
+										end: 5,
+										message: "Duplicate attribute \"id\" is not allowed.",
+										start: 3
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
+					"reports each and for prefixed with a dash",
+					() => {
+						expect(pug("- each item in items")).toStrictEqual(
+							{
+								ast: [
+									pug_node("- each item in items")
+								],
+								errors: [
+									{
+										end: 20,
+										message: "Pug each and for should no longer be prefixed with a dash (\"-\"). "
+											+ "They are pug keywords and not part of JavaScript.",
+										start: 0
+									}
+								]
+							}
+						)
+						expect(pug("- for item of items")).toStrictEqual(
+							{
+								ast: [
+									pug_node("- for item of items")
+								],
+								errors: [
+									{
+										end: 19,
+										message: "Pug each and for should not be prefixed with a dash (\"-\"). "
+											+ "They are pug keywords and not part of JavaScript.",
+										start: 0
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
+					"reports each without in or of",
+					() => {
+						expect(pug("each item\n  p")).toStrictEqual(
+							{
+								ast: [
+									pug_node("each item"),
+									element_node("p", "p", "open")
+								],
+								errors: [
+									{
+										end: 9,
+										message: "This \"each\" has a syntax error. "
+											+ "\"each\" statements should be of the form \"each VARIABLE_NAME of JS_EXPRESSION\".",
+										start: 0
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
+					"reports else with a condition and default with an expression",
+					() => {
+						expect(pug("if a\n  p\nelse b\n  p")).toStrictEqual(
+							{
+								ast: [
+									pug_node("if a"),
+									element_node("p", "p", "open"),
+									pug_node("else b"),
+									element_node("p", "p", "open")
+								],
+								errors: [
+									{
+										end: 15,
+										message: "\"else\" cannot have a condition; perhaps you meant \"else if\".",
+										start: 14
+									}
+								]
+							}
+						)
+						expect(pug("case a\n  default b")).toStrictEqual(
+							{
+								ast: [
+									pug_node("case a"),
+									pug_node("default"),
+									text_node("b")
+								],
+								errors: [
+									{
+										end: 16,
+										message: "\"default\" should not have an expression.",
+										start: 9
+									},
+									{
+										end: 18,
+										message: "Expected an indented line, but found text.",
+										start: 17
+									},
+									{
+										end: 18,
+										message: "Expected \"when\", \"default\" or a line break, but found text.",
+										start: 17
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
+					"reports extends and include without a path",
+					() => {
+						expect(pug("extends")).toStrictEqual(
+							{
+								ast: [],
+								errors: [
+									{
+										end: 7,
+										message: "\"extends\" is missing a path.",
+										start: 7
+									},
+									{
+										end: 7,
+										message: "Expected a path, but found the end of the input.",
+										start: 7
+									}
+								]
+							}
+						)
+						expect(pug("include  ")).toStrictEqual(
+							{
+								ast: [],
+								errors: [
+									{
+										end: 9,
+										message: "\"include\" is missing a path.",
+										start: 9
+									},
+									{
+										end: 9,
+										message: "Expected a path, but found the end of the input.",
+										start: 9
+									}
+								]
+							}
+						)
+						expect(pug("include:md.txt")).toStrictEqual(
+							{
+								ast: [ text_node(".txt") ],
+								errors: [
+									{
+										end: 14,
+										message: "Unexpected text \".txt\".",
+										start: 10
+									},
+									{
+										end: 14,
+										message: "Expected a path, but found text.",
+										start: 10
 									}
 								]
 							}
@@ -1425,6 +2453,31 @@ describe(
 					}
 				)
 				it(
+					"reports indentation mixing tabs and spaces",
+					() => {
+						expect(pug("div\n \tp")).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"div\n \tp",
+										"div",
+										"open",
+										[],
+										[ element_node("p", "p", "open") ]
+									)
+								],
+								errors: [
+									{
+										end: 6,
+										message: "Invalid indentation: use tabs or spaces, not both.",
+										start: 4
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
 					"reports input nested too deeply instead of throwing, keeping the nodes before it",
 					() => {
 						expect(
@@ -1437,6 +2490,169 @@ describe(
 										end: 30003,
 										message: "The input is nested too deeply.",
 										start: 2
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
+					"reports logic without the indented block it needs",
+					() => {
+						expect(pug("each item in items")).toStrictEqual(
+							{
+								ast: [ pug_node("each item in items") ],
+								errors: [
+									{
+										end: 18,
+										message: "Expected an indented line, but found the end of the input.",
+										start: 18
+									}
+								]
+							}
+						)
+						expect(pug("case a")).toStrictEqual(
+							{
+								ast: [ pug_node("case a") ],
+								errors: [
+									{
+										end: 6,
+										message: "Expected an indented line, but found the end of the input.",
+										start: 6
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
+					"reports malformed extends and include",
+					() => {
+						for (const keyword of [ "extends", "include" ]) {
+							expect(pug(`${keyword}.x`)).toStrictEqual(
+								{
+									ast: [
+										element_node(
+											".x",
+											"div",
+											"open",
+											[
+												attribute_node(
+													".x",
+													"class",
+													string_node("x", "unquoted")
+												)
+											]
+										)
+									],
+									errors: [
+										{
+											end: 7,
+											message: `"${keyword}" is malformed.`,
+											start: 0
+										},
+										{
+											end: 9,
+											message: "Expected a path, but found a class name.",
+											start: 7
+										}
+									]
+								}
+							)
+						}
+					}
+				)
+				it(
+					"reports mismatched brackets",
+					() => {
+						expect(pug("p(a=b])")).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"p(a=b])",
+										"p",
+										"open",
+										[
+											attribute_node("a=b]", "a", pug_node("b]"))
+										]
+									)
+								],
+								errors: [
+									{
+										end: 6,
+										message: "Mismatched bracket \"]\".",
+										start: 5
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
+					"reports misplaced lines and goes on",
+					() => {
+						expect(pug("doctype html\n  p")).toStrictEqual(
+							{
+								ast: [ element_node("p", "p", "open") ],
+								errors: [
+									{
+										end: 15,
+										message: "Did not expect an indented line here.",
+										start: 15
+									}
+								]
+							}
+						)
+						expect(pug("else\n  p")).toStrictEqual(
+							{
+								ast: [
+									pug_node("else"),
+									element_node("p", "p", "open")
+								],
+								errors: [
+									{
+										end: 4,
+										message: "Did not expect \"else\" here.",
+										start: 0
+									}
+								]
+							}
+						)
+						expect(pug("else")).toStrictEqual(
+							{
+								ast: [ pug_node("else") ],
+								errors: [
+									{
+										end: 4,
+										message: "Did not expect \"else\" here.",
+										start: 0
+									}
+								]
+							}
+						)
+						expect(pug("when a: p")).toStrictEqual(
+							{
+								ast: [
+									pug_node("when a"),
+									element_node("p", "p", "open")
+								],
+								errors: [
+									{
+										end: 6,
+										message: "Did not expect \"when\" here.",
+										start: 0
+									}
+								]
+							}
+						)
+						expect(pug("(a)")).toStrictEqual(
+							{
+								ast: [],
+								errors: [
+									{
+										end: 1,
+										message: "Did not expect \"(\" here.",
+										start: 0
 									}
 								]
 							}
@@ -1464,6 +2680,198 @@ describe(
 								}
 							]
 						)
+					}
+				)
+				it(
+					"reports tag interpolations nested too deeply instead of throwing",
+					() => {
+						expect(
+							pug(`p ${"#[a ".repeat(10000)}`)
+						).toStrictEqual(
+							{
+								ast: [],
+								errors: [
+									{
+										end: 40002,
+										message: "The input is nested too deeply.",
+										start: 0
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
+					"reports text the lexer cannot read and keeps it as text",
+					() => {
+						for (const text of [ "%", "+", "]" ]) {
+							expect(pug(text)).toStrictEqual(
+								{
+									ast: [ text_node(text) ],
+									errors: [
+										{
+											end: 1,
+											message: `Unexpected text "${text}".`,
+											start: 0
+										}
+									]
+								}
+							)
+						}
+						for (const text of [ "&x", ":", "=" ]) {
+							expect(pug(`p${text}`)).toStrictEqual(
+								{
+									ast: [
+										element_node(
+											`p${text}`,
+											"p",
+											"open",
+											[],
+											[ text_node(text) ]
+										)
+									],
+									errors: [
+										{
+											end: 1 + text.length,
+											message: `Unexpected text "${text}".`,
+											start: 1
+										}
+									]
+								}
+							)
+						}
+					}
+				)
+				it(
+					"reports tokens left over in a tag interpolation and goes on",
+					() => {
+						const errors = [
+							{
+								end: 11,
+								message: "Expected \"]\", but found text.",
+								start: 10
+							},
+							{
+								end: 12,
+								message: "Did not expect \"]\" here.",
+								start: 11
+							}
+						]
+						expect(pug("p.\n  #[a/ b]")).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"p.\n  #[a/ b]",
+										"p",
+										"open",
+										[],
+										[
+											element_node("a/", "a", "closed"),
+											text_node("b")
+										]
+									)
+								],
+								errors
+							}
+						)
+						expect(pug("//\n  #[a/ b]")).toStrictEqual(
+							{
+								ast: [ comment_node("//\n  #[a/ b]") ],
+								errors
+							}
+						)
+					}
+				)
+				it(
+					"reports unclosed interpolations and mixin arguments",
+					() => {
+						expect(pug("p #{a")).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"p #{a",
+										"p",
+										"open",
+										[],
+										[ pug_node("#{a") ]
+									)
+								],
+								errors: [
+									{
+										end: 5,
+										message: "End of line was reached with no closing bracket for interpolation.",
+										start: 2
+									}
+								]
+							}
+						)
+						expect(pug("p #[= a")).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"p #[= a",
+										"p",
+										"open",
+										[],
+										[ pug_node("= a") ]
+									)
+								],
+								errors: [
+									{
+										end: 7,
+										message: "End of line was reached with no closing bracket for interpolation.",
+										start: 6
+									},
+									{
+										end: 7,
+										message: "End of line was reached with no closing bracket for interpolation.",
+										start: 2
+									}
+								]
+							}
+						)
+						expect(pug("+m(a")).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"+m(a",
+										"+m",
+										"open",
+										[
+											attribute_node("(a", "", pug_node("(a"))
+										]
+									)
+								],
+								errors: [
+									{
+										end: 4,
+										message: "The input ended before the closing \")\".",
+										start: 2
+									}
+								]
+							}
+						)
+					}
+				)
+				it(
+					"rethrows errors other than deep nesting",
+					() => {
+						const injected = new TypeError("Injected.")
+						const max = vi.spyOn(Math, "max").mockImplementation(
+							() => {
+								throw injected
+							}
+						)
+						/** @type {unknown} */
+						let thrown
+						try {
+							parsePug("p")
+						} catch (error) {
+							thrown = error
+						} finally {
+							max.mockRestore()
+						}
+						expect(thrown).toBe(injected)
 					}
 				)
 			}
@@ -1642,6 +3050,100 @@ describe(
 												[ text_node("c") ]
 											)
 										]
+									)
+								],
+								errors: []
+							}
+						)
+					}
+				)
+				it(
+					"maps positions in input starting with a byte order mark",
+					() => {
+						expect(pug("﻿p a")).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"p a",
+										"p",
+										"open",
+										[],
+										[ text_node("a") ]
+									)
+								],
+								errors: []
+							}
+						)
+					}
+				)
+				it(
+					"maps positions in input with lone carriage returns, including boolean attributes",
+					() => {
+						expect(
+							pug("ul\r  li(hidden) a\r  li b")
+						).toStrictEqual(
+							{
+								ast: [
+									element_node(
+										"ul\r  li(hidden) a\r  li b",
+										"ul",
+										"open",
+										[],
+										[
+											element_node(
+												"li(hidden) a",
+												"li",
+												"open",
+												[
+													attribute_node("hidden", "hidden")
+												],
+												[ text_node("a") ]
+											),
+											element_node(
+												"li b",
+												"li",
+												"open",
+												[],
+												[ text_node("b") ]
+											)
+										]
+									)
+								],
+								errors: []
+							}
+						)
+					}
+				)
+				it(
+					"maps positions of scripts and strings in CRLF input",
+					() => {
+						expect(
+							pug("- var a = `b${\"c\"}`\r\np d")
+						).toStrictEqual(
+							{
+								ast: [
+									pug_node(
+										"- var a = `b${\"c\"}`",
+										[
+											string_node(
+												"`b${\"c\"}`",
+												"backtick",
+												[
+													script_node(
+														"${\"c\"}",
+														"template",
+														[ string_node("\"c\"", "double") ]
+													)
+												]
+											)
+										]
+									),
+									element_node(
+										"p d",
+										"p",
+										"open",
+										[],
+										[ text_node("d") ]
 									)
 								],
 								errors: []

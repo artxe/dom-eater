@@ -60,10 +60,18 @@ function decorator_start(text, end, state) {
 		)
 		: end
 	for (;;) {
-		if (!identifier_part_regex.test(text[i] ?? "")) return -1
-		while (identifier_part_regex.test(text[i - 1] ?? "")) i--
-		if (text[i - 1] == "@") return i - 1
-		if (text[i - 1] != ".") return -1
+		if (!identifier_part_regex.test(text[i] ?? "")) {
+			return -1
+		}
+		while (identifier_part_regex.test(text[i - 1] ?? "")) {
+			i--
+		}
+		if (text[i - 1] == "@") {
+			return i - 1
+		}
+		if (text[i - 1] != ".") {
+			return -1
+		}
 		i -= 2
 	}
 }
@@ -79,7 +87,9 @@ function is_async_arrow(text, index, state) {
 	if (text[i] == ")") {
 		start = state.openings.get(i + 1) ?? -1
 		const before = previous_index(text, start, state)
-		if (text[before] == ">" && text[before - 1] != "=") start = type_parameters_start(text, before)
+		if (text[before] == ">" && text[before - 1] != "=") {
+			start = type_parameters_start(text, before)
+		}
 	}
 	return start >= 0 && start <= i && previous_word(
 		text,
@@ -96,12 +106,16 @@ function is_case_clause(text, index, state) {
 	let i = index
 	for (;;) {
 		const token = previous_token(text, i, state)
-		if (token.kind == "word" && token.value == "case") return true
+		if (token.kind == "word" && token.value == "case") {
+			return true
+		}
 		const stops = token.kind == ""
 			|| token.kind == "punctuator" && ":;{}".includes(token.value)
 			|| token.kind == "word" && statement_words.has(token.value)
 			|| token.kind == "bracket" && state.expression_after.get(token.end) == true
-		if (stops) return false
+		if (stops) {
+			return false
+		}
 		i = token.start
 	}
 }
@@ -113,9 +127,13 @@ function is_case_clause(text, index, state) {
  */
 function is_declaration_annotation(text, index, state) {
 	let i = previous_index(text, index, state)
-	if (text[i] == "!") i = previous_index(text, i, state)
+	if (text[i] == "!") {
+		i = previous_index(text, i, state)
+	}
 	const word = previous_word(text, i)
-	if (!word) return false
+	if (!word) {
+		return false
+	}
 	const before = previous_index(text, i - word.length + 1, state)
 	return declaration_keywords.has(previous_word(text, before))
 		|| text[before] == "," && is_declaration_list(text, before, state)
@@ -130,11 +148,15 @@ function is_declaration_annotation(text, index, state) {
 function is_method_name(text, index, end, state) {
 	const next = text[next_index(text, end)]
 	const bracket = current_bracket(state)
-	if (next != "(" && next != "<" || bracket.kind != "{" && !bracket.members) return false
+	if (next != "(" && next != "<" || bracket.kind != "{" && !bracket.members) {
+		return false
+	}
 	let start = index
 	for (;;) {
 		const i = previous_index(text, start, state)
-		const word = identifier_part_regex.test(text[i] ?? "")
+		const word = identifier_part_regex.test(
+			/** @type {string} */(text[i])/**/
+		)
 			? previous_word(text, i)
 			: ""
 		if (text[i] == "*") {
@@ -146,8 +168,12 @@ function is_method_name(text, index, end, state) {
 		}
 	}
 	const token = previous_token(text, start, state)
-	if (token.kind == "" || "{,;".includes(token.value) && token.kind == "punctuator") return true
-	if (!bracket.members) return false
+	if (token.kind == "" || "{,;".includes(token.value) && token.kind == "punctuator") {
+		return true
+	}
+	if (!bracket.members) {
+		return false
+	}
 	return token.value == "}"
 		|| decorator_start(text, token.end - 1, state) >= 0
 		|| text[start] != "*" && ends_operand(token) && line_terminator_regex.test(text.slice(token.end, start))
@@ -158,11 +184,30 @@ function is_method_name(text, index, end, state) {
  * @param {import("../../private.js").ScanState} state
  * @returns {boolean}
  */
+function is_optional_method(text, index, state) {
+	const i = previous_index(text, index, state)
+	return is_method_name(
+		text,
+		state.openings.get(i + 1) ?? i - previous_word(text, i).length + 1,
+		index + 1,
+		state
+	)
+}
+/**
+ * @param {string} text
+ * @param {number} index
+ * @param {import("../../private.js").ScanState} state
+ * @returns {boolean}
+ */
 function is_statement_start(text, index, state) {
 	const i = previous_index(text, index, state)
 	const decorator = decorator_start(text, i, state)
-	if (decorator >= 0) return is_statement_start(text, decorator, state)
-	if (i < 0 || state.expression_after.has(i + 1)) return true
+	if (decorator >= 0) {
+		return is_statement_start(text, decorator, state)
+	}
+	if (i < 0 || state.expression_after.has(i + 1)) {
+		return true
+	}
 	const char = /** @type {string} */(text[i])/**/
 	if (identifier_part_regex.test(char)) {
 		const word = previous_word(text, i)
@@ -174,8 +219,12 @@ function is_statement_start(text, index, state) {
 			|| !is_keyword_before_expression(text, i, state)
 			|| line_break && (word == "return" || word == "yield")
 	}
-	if (char == ":") return state.colons.get(i) == true
-	if (char == "{") return current_bracket(state).kind == "block"
+	if (char == ":") {
+		return state.colons.get(i) == true
+	}
+	if (char == "{") {
+		return current_bracket(state).kind == "block"
+	}
 	return char == ";" || char == "\"" || char == "'" || !is_expression_start(text, index, state)
 }
 /**
@@ -186,7 +235,9 @@ function is_statement_start(text, index, state) {
  */
 function scan_keyword(text, index, state) {
 	let end = index
-	while (identifier_part_regex.test(text[end] ?? "")) end++
+	while (identifier_part_regex.test(text[end] ?? "")) {
+		end++
+	}
 	const word = text.slice(index, end)
 	const next = next_index(text, end)
 	const bracket = current_bracket(state)
@@ -205,9 +256,13 @@ function scan_keyword(text, index, state) {
 		const i = previous_index(text, index, state)
 		if (word == "as" && previous_word(text, i) == "export") {
 			let name_end = next
-			while (identifier_part_regex.test(text[name_end] ?? "")) name_end++
+			while (identifier_part_regex.test(text[name_end] ?? "")) {
+				name_end++
+			}
 			name_end = next_index(text, name_end)
-			while (identifier_part_regex.test(text[name_end] ?? "")) name_end++
+			while (identifier_part_regex.test(text[name_end] ?? "")) {
+				name_end++
+			}
 			state.expression_after.set(name_end, true)
 		} else if (!is_expression_start(text, index, state) && !line_terminator_regex.test(text.slice(i + 1, index))) {
 			bracket.type_end = skip_type(text, end)
@@ -223,12 +278,16 @@ function scan_keyword(text, index, state) {
 	} else if (word == "type") {
 		if (name_follows) {
 			let i = next
-			while (identifier_part_regex.test(text[i] ?? "")) i++
+			while (identifier_part_regex.test(text[i] ?? "")) {
+				i++
+			}
 			i = next_index(text, i)
-			if (text[i] == "<") i = next_index(
-				text,
-				skip_type_arguments(text, i)
-			)
+			if (text[i] == "<") {
+				i = next_index(
+					text,
+					skip_type_arguments(text, i)
+				)
+			}
 			if (text[i] == "=") {
 				bracket.type_end = skip_type(text, i + 1)
 				state.expression_after.set(bracket.type_end, true)
@@ -277,11 +336,16 @@ function skip_type(text, index) {
 		parameters = false
 		if (identifier_part_regex.test(char)) {
 			let word_end = i
-			while (identifier_part_regex.test(text[word_end] ?? "")) word_end++
+			while (identifier_part_regex.test(text[word_end] ?? "")) {
+				word_end++
+			}
 			const word = text.slice(i, word_end)
 			if (operand) {
-				if (word == "extends" && !line_break) conditionals++
-				else if (word != "is") return end
+				if (word == "extends" && !line_break) {
+					conditionals++
+				} else if (word != "is") {
+					return end
+				}
 				operand = false
 			} else if (!type_operators.has(word)) {
 				end = word_end
@@ -373,9 +437,15 @@ export default function(text, index, state) {
 		return index + 2
 	} else if (char == "?") {
 		const next = text[index + 1]
-		if (next == "?") return index + 2
-		if (next == "." && !/\d/.test(text[index + 2] ?? "")) return index + 2
-		current_bracket(state).ternaries++
+		if (next == "?") {
+			return index + 2
+		}
+		if (next == "." && !/\d/.test(text[index + 2] ?? "")) {
+			return index + 2
+		}
+		if (!is_optional_method(text, index, state)) {
+			current_bracket(state).ternaries++
+		}
 	} else if (char == ":") {
 		const bracket = current_bracket(state)
 		if (bracket.ternaries) {

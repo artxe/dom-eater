@@ -37,7 +37,9 @@ export function dom_eater_ranges(code, jsx) {
 	elements.sort(
 		(a, b) => a[0] - b[0] || b[1] - a[1]
 	)
-	if (elements.length) return { elements, strings: undefined }
+	if (elements.length) {
+		return { elements, strings: undefined }
+	}
 	const source = parse_typescript(code, jsx)
 	const prefix = "externalModuleIndicator" in source && source.externalModuleIndicator
 		? "{async () => {\n"
@@ -102,14 +104,18 @@ export function typescript_ranges(code, jsx) {
 	 * @returns {void}
 	 */
 	function visit(node, in_template) {
-		if (jsx_kinds.has(node.kind)) elements.push(
-			[ node.getStart(source), node.end ]
-		)
+		if (jsx_kinds.has(node.kind)) {
+			elements.push(
+				[ node.getStart(source), node.end ]
+			)
+		}
 		const literal = string_kinds.has(node.kind) && node.parent.kind != ts.SyntaxKind.JsxAttribute
 			|| template_kinds.has(node.kind)
-		if (literal && !in_template) strings.push(
-			[ node.getStart(source), node.end ]
-		)
+		if (literal && !in_template) {
+			strings.push(
+				[ node.getStart(source), node.end ]
+			)
+		}
 		ts.forEachChild(
 			node,
 			child => visit(
