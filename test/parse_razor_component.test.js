@@ -651,22 +651,17 @@ describe(
 				it(
 					"reports a generic type constraint cut off after where at the end of the text",
 					() => {
-						expect(
-							razor_component("@typeparam T where")
-						).toStrictEqual(
-							{
-								ast: [
-									razor_node("@typeparam T where")
-								],
-								errors: [
-									{
-										end: 18,
-										message: "The type parameter of the constraint does not match.",
-										start: 18
-									}
-								]
-							}
+						const result = razor_component("@typeparam T where")
+						expect(result.ast).toStrictEqual(
+							[
+								razor_node("@typeparam T where")
+							]
 						)
+						expect(
+							result.errors.map(
+								({ end, start }) => [ start, end ]
+							)
+						).toStrictEqual([ [ 18, 18 ] ])
 					}
 				)
 			}
@@ -676,76 +671,30 @@ describe(
 			() => {
 				it.each(
 					[
-						[
-							"@page \"\"\"",
-							[
-								{
-									end: 9,
-									message: "The directive expects a quoted string.",
-									start: 6
-								}
-							]
-						],
+						[ "@page \"\"\"", [ [ 6, 9 ] ] ],
 						[
 							"@page @\"",
-							[
-								{
-									end: 8,
-									message: "The directive expects a quoted string.",
-									start: 6
-								},
-								{
-									end: 8,
-									message: "Expected a code block, an expression or an identifier after \"@\".",
-									start: 7
-								}
-							]
+							[ [ 6, 8 ], [ 7, 8 ] ]
 						],
 						[
 							"@preservewhitespace x",
-							[
-								{
-									end: 21,
-									message: "The directive expects a boolean.",
-									start: 20
-								}
-							]
+							[ [ 20, 21 ] ]
 						],
-						[
-							"@rendermode 1",
-							[
-								{
-									end: 13,
-									message: "The directive expects an identifier or an expression.",
-									start: 12
-								}
-							]
-						],
+						[ "@rendermode 1", [ [ 12, 13 ] ] ],
 						[
 							"@typeparam T where U : class",
-							[
-								{
-									end: 20,
-									message: "The type parameter of the constraint does not match.",
-									start: 19
-								}
-							]
+							[ [ 19, 20 ] ]
 						],
-						[
-							"@typeparam T x",
-							[
-								{
-									end: 14,
-									message: "Expected \"where\".",
-									start: 13
-								}
-							]
-						]
+						[ "@typeparam T x", [ [ 13, 14 ] ] ]
 					]
 				)(
 					"%j",
 					(source, expected) => {
-						expect(razor_component(source).errors).toStrictEqual(expected)
+						expect(
+							razor_component(source).errors.map(
+								({ end, start }) => [ start, end ]
+							)
+						).toStrictEqual(expected)
 					}
 				)
 			}

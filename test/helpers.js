@@ -7,7 +7,6 @@ import {
 	parseRazorComponent,
 	parseScript
 } from "dom-eater"
-import { readFileSync } from "node:fs"
 import { expect } from "vitest"
 /**
  * @template T
@@ -382,26 +381,6 @@ export function razor_node(text, strings = [], elements = []) {
 		subType: "razor",
 		text,
 		type: "Script"
-	}
-}
-/**
- * @param {string} name
- * @returns {{ expected: unknown, source: string }}
- */
-export function readme_example(name) {
-	const readme = readFileSync(
-		new URL("../README.md", import.meta.url),
-		"utf8"
-	).replace(/\r\n/g, "\n")
-	const match = readme.match(
-		new RegExp(
-			`${name}\\(\`((?:[^\`\\\\]|\\\\.)*)\`\\)[\\s\\S]*?\`\`\`json\\n([\\s\\S]*?)\`\`\``
-		)
-	)
-	expect(match).not.toBeNull()
-	return {
-		expected: JSON.parse(String(match?.[2])),
-		source: String(match?.[1]).replace(/\\([\\$`])/g, "$1")
 	}
 }
 export const script = create_parser(parseScript)

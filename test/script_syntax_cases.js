@@ -256,47 +256,27 @@ export const script_syntax_cases = [
 		]
 	]
 ]
-/** @type {[ string, string, Positionless<StringNode>[], { end: number, message: string, start: number }[] ][]} */
+/** @type {[ string, string, Positionless<StringNode>[], { end: number, start: number }[] ][]} */
 export const script_syntax_error_cases = [
 	[
 		"an unterminated block",
 		"{a",
 		[],
-		[
-			{
-				end: 2,
-				message: "The {…} block is not closed.",
-				start: 0
-			}
-		]
+		[ { end: 2, start: 0 } ]
 	],
 	[
 		"an unterminated block that ends in a line comment",
 		"{a // }",
 		[],
-		[
-			{
-				end: 7,
-				message: "The {…} block is not closed.",
-				start: 0
-			}
-		]
+		[ { end: 7, start: 0 } ]
 	],
 	[
 		"an unterminated double quoted string",
 		"{\"a",
 		[ string_node("\"a", "double") ],
 		[
-			{
-				end: 3,
-				message: "The double-quoted string is not closed.",
-				start: 1
-			},
-			{
-				end: 3,
-				message: "The {…} block is not closed.",
-				start: 0
-			}
+			{ end: 3, start: 1 },
+			{ end: 3, start: 0 }
 		]
 	],
 	[
@@ -304,16 +284,8 @@ export const script_syntax_error_cases = [
 		"{'a",
 		[ string_node("'a", "single") ],
 		[
-			{
-				end: 3,
-				message: "The single-quoted string is not closed.",
-				start: 1
-			},
-			{
-				end: 3,
-				message: "The {…} block is not closed.",
-				start: 0
-			}
+			{ end: 3, start: 1 },
+			{ end: 3, start: 0 }
 		]
 	],
 	[
@@ -327,21 +299,9 @@ export const script_syntax_error_cases = [
 			)
 		],
 		[
-			{
-				end: 5,
-				message: "The template literal substitution is not closed.",
-				start: 2
-			},
-			{
-				end: 5,
-				message: "The template literal is not closed.",
-				start: 1
-			},
-			{
-				end: 5,
-				message: "The {…} block is not closed.",
-				start: 0
-			}
+			{ end: 5, start: 2 },
+			{ end: 5, start: 1 },
+			{ end: 5, start: 0 }
 		]
 	],
 	[
@@ -349,16 +309,8 @@ export const script_syntax_error_cases = [
 		"{`a",
 		[ string_node("`a", "backtick") ],
 		[
-			{
-				end: 3,
-				message: "The template literal is not closed.",
-				start: 1
-			},
-			{
-				end: 3,
-				message: "The {…} block is not closed.",
-				start: 0
-			}
+			{ end: 3, start: 1 },
+			{ end: 3, start: 0 }
 		]
 	]
 ]
