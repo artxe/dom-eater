@@ -95,6 +95,10 @@ function dom_eater_items(text, component) {
 	const comments = []
 	/** @type {string[]} */
 	const items = []
+	for (const node of (component ? parseRazorComponent : parseRazor)(text).ast) {
+		visit(node, false)
+	}
+	return { comments, items }
 	/**
 	 * @param {import("dom-eater").AstNode} node
 	 * @param {boolean} in_string
@@ -144,10 +148,6 @@ function dom_eater_items(text, component) {
 			}
 		}
 	}
-	for (const node of (component ? parseRazorComponent : parseRazor)(text).ast) {
-		visit(node, false)
-	}
-	return { comments, items }
 }
 /**
  * @param {boolean} component
@@ -202,42 +202,6 @@ export function razor_differential(component, count) {
 	}
 	/** @type {Map<string, { diagnostics: number, error: string | null, items: string[] }>} */
 	const cache = new Map()
-	/**
-	 * @param {string} reference
-	 * @param {string[]} texts
-	 * @returns {void}
-	 */
-	function query(reference, texts) {
-		const pending = [ ...new Set(texts) ].filter(text => !cache.has(text))
-		for (let i = 0; i < pending.length; i += 2000) {
-			const batch = pending.slice(i, i + 2000)
-			const output = execFileSync(
-				"dotnet",
-				[ reference ],
-				{
-					encoding: "utf8",
-					input: batch.map(
-						text => `${JSON.stringify({ component, text })}\n`
-					).join(""),
-					maxBuffer: 1 << 30
-				}
-			)
-			output.trim().split(/\r?\n/)
-				.forEach(
-					(line, j) => cache.set(
-						/** @type {string} */(batch[j])/**/,
-						JSON.parse(line)
-					)
-				)
-		}
-	}
-	/**
-	 * @param {string} text
-	 * @returns {boolean}
-	 */
-	function usable(text) {
-		return text.isWellFormed()
-	}
 	query(
 		dll,
 		sim_seeds("razor", count).map(
@@ -281,6 +245,42 @@ export function razor_differential(component, count) {
 			]
 		}
 	)
+	/**
+	 * @param {string} reference
+	 * @param {string[]} texts
+	 * @returns {void}
+	 */
+	function query(reference, texts) {
+		const pending = [ ...new Set(texts) ].filter(text => !cache.has(text))
+		for (let i = 0; i < pending.length; i += 2000) {
+			const batch = pending.slice(i, i + 2000)
+			const output = execFileSync(
+				"dotnet",
+				[ reference ],
+				{
+					encoding: "utf8",
+					input: batch.map(
+						text => `${JSON.stringify({ component, text })}\n`
+					).join(""),
+					maxBuffer: 1 << 30
+				}
+			)
+			output.trim().split(/\r?\n/)
+				.forEach(
+					(line, j) => cache.set(
+						/** @type {string} */(batch[j])/**/,
+						JSON.parse(line)
+					)
+				)
+		}
+	}
+	/**
+	 * @param {string} text
+	 * @returns {boolean}
+	 */
+	function usable(text) {
+		return text.isWellFormed()
+	}
 }
 /**
  * @param {string[]} items

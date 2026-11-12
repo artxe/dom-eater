@@ -282,8 +282,8 @@ function track_namespace(text, node, namespaces) {
 		namespaces.push({ name, namespace: name })
 	} else if (
 		namespace == "math" && mathml_text_integration_points.has(name)
-		|| namespace == "math" && name == "annotation-xml" && is_html_encoding(text, node)
-		|| namespace == "svg" && svg_html_integration_points.has(name)
+			|| namespace == "math" && name == "annotation-xml" && is_html_encoding(text, node)
+			|| namespace == "svg" && svg_html_integration_points.has(name)
 	) {
 		namespaces.push({ name, namespace: "html" })
 	}

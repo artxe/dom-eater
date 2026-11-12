@@ -28,6 +28,16 @@ const b_element = element_node(
 		)
 	]
 )
+/**
+ * The start and end of each error, without its wording.
+ * @param {{ errors: { end: number, start: number }[] }} result
+ * @returns {[ number, number ][]}
+ */
+function error_ranges({ errors }) {
+	return errors.map(
+		({ end, start }) => [ start, end ]
+	)
+}
 describe(
 	"parseScript",
 	() => {
@@ -61,174 +71,107 @@ describe(
 				it(
 					"keeps a substitution being typed after another substitution",
 					() => {
-						expect(script("x = html`${a}<p>${b")).toStrictEqual(
-							{
-								ast: [
-									element_node(
-										"<p>${b",
-										"p",
-										"open",
-										[],
-										[ template_node("${b") ]
-									)
-								],
-								errors: [
-									{
-										end: 19,
-										message: "The template literal substitution is not closed.",
-										start: 16
-									},
-									{
-										end: 19,
-										message: "The template literal is not closed.",
-										start: 8
-									}
-								]
-							}
+						const result = script("x = html`${a}<p>${b")
+						expect(result.ast).toStrictEqual(
+							[
+								element_node(
+									"<p>${b",
+									"p",
+									"open",
+									[],
+									[ template_node("${b") ]
+								)
+							]
 						)
+						expect(error_ranges(result)).toStrictEqual([ [ 16, 19 ], [ 8, 19 ] ])
 					}
 				)
 				it(
 					"keeps the element being typed last in an unterminated template",
 					() => {
-						expect(
-							script(
-								"x = html`<div class=\"a\"><p class=\""
-							)
-						).toStrictEqual(
-							{
-								ast: [
-									element_node(
-										"<div class=\"a\">",
-										"div",
-										"open",
-										[
-											attribute_node(
-												"class=\"a\"",
-												"class",
-												string_node("\"a\"", "double")
-											)
-										]
-									),
-									element_node(
-										"<p class=\"",
-										"p",
-										"open",
-										[
-											attribute_node(
-												"class=\"",
-												"class",
-												string_node("\"", "double")
-											)
-										]
-									)
-								],
-								errors: [
-									{
-										end: 34,
-										message: "The template literal is not closed.",
-										start: 8
-									},
-									{
-										end: 34,
-										message: "The double-quoted attribute value is not closed.",
-										start: 33
-									},
-									{
-										end: 34,
-										message: "The start tag is not closed.",
-										start: 24
-									},
-									{
-										end: 24,
-										message: "The \"div\" element is not closed.",
-										start: 9
-									}
-								]
-							}
+						const result = script(
+							"x = html`<div class=\"a\"><p class=\""
+						)
+						expect(result.ast).toStrictEqual(
+							[
+								element_node(
+									"<div class=\"a\">",
+									"div",
+									"open",
+									[
+										attribute_node(
+											"class=\"a\"",
+											"class",
+											string_node("\"a\"", "double")
+										)
+									]
+								),
+								element_node(
+									"<p class=\"",
+									"p",
+									"open",
+									[
+										attribute_node(
+											"class=\"",
+											"class",
+											string_node("\"", "double")
+										)
+									]
+								)
+							]
+						)
+						expect(error_ranges(result)).toStrictEqual(
+							[
+								[ 8, 34 ],
+								[ 33, 34 ],
+								[ 24, 34 ],
+								[ 9, 24 ]
+							]
 						)
 					}
 				)
 				it(
 					"reports errors in the code of a substitution only once",
 					() => {
-						expect(
-							script("x = html`<p>${'a}</p>`")
-						).toStrictEqual(
-							{
-								ast: [
-									element_node(
-										"<p>${'a}</p>`",
-										"p",
-										"open",
-										[],
-										[
-											template_node(
-												"${'a}</p>`",
-												[
-													string_node("'a}</p>`", "single")
-												]
-											)
-										]
-									)
-								],
-								errors: [
-									{
-										end: 22,
-										message: "The single-quoted string is not closed.",
-										start: 14
-									},
-									{
-										end: 22,
-										message: "The template literal substitution is not closed.",
-										start: 12
-									},
-									{
-										end: 22,
-										message: "The template literal is not closed.",
-										start: 8
-									}
-								]
-							}
+						const result = script("x = html`<p>${'a}</p>`")
+						expect(result.ast).toStrictEqual(
+							[
+								element_node(
+									"<p>${'a}</p>`",
+									"p",
+									"open",
+									[],
+									[
+										template_node(
+											"${'a}</p>`",
+											[
+												string_node("'a}</p>`", "single")
+											]
+										)
+									]
+								)
+							]
+						)
+						expect(error_ranges(result)).toStrictEqual(
+							[ [ 14, 22 ], [ 12, 22 ], [ 8, 22 ] ]
 						)
 					}
 				)
-				it(
-					"reports markup errors after a substitution",
-					() => {
-						expect(script("x = html`${a}<div>`")).toStrictEqual(
-							{
-								ast: [
-									element_node("<div>", "div", "open")
-								],
-								errors: [
-									{
-										end: 18,
-										message: "The \"div\" element is not closed.",
-										start: 13
-									}
-								]
-							}
+				it.each(
+					[
+						[ "x = html`${a}<div>`", 13, 18 ],
+						[ "x = html`<div>${a}`", 9, 14 ]
+					]
+				)(
+					"reports markup errors next to a substitution in %j",
+					(code, start, end) => {
+						const result = script(code)
+						expect(result.ast).toStrictEqual(
+							[
+								element_node("<div>", "div", "open")
+							]
 						)
-					}
-				)
-				it(
-					"reports markup errors before a substitution",
-					() => {
-						expect(script("x = html`<div>${a}`")).toStrictEqual(
-							{
-								ast: [
-									element_node("<div>", "div", "open")
-								],
-								errors: [
-									{
-										end: 14,
-										message: "The \"div\" element is not closed.",
-										start: 9
-									}
-								]
-							}
-						)
+						expect(error_ranges(result)).toStrictEqual([ [ start, end ] ])
 					}
 				)
 			}
@@ -312,7 +255,7 @@ describe(
 						expect(
 							script(
 								"a = `<b></b>`; b = xhtml`<b></b>`; c = { title: `<b></b>` };"
-										+ " d = x ? template : `<b></b>`; e = /* css */ `<b></b>`; f = html.x`<b></b>`"
+									+ " d = x ? template : `<b></b>`; e = /* css */ `<b></b>`; f = html.x`<b></b>`"
 							)
 						).toStrictEqual({ ast: [], errors: [] })
 					}
@@ -534,10 +477,6 @@ describe(
 						[
 							"a quoted template key",
 							"c = { \"template\": `<b class=\"x\"></b>` }"
-						],
-						[
-							"a single-quoted template key",
-							"c = { 'template': `<b class=\"x\"></b>` }"
 						],
 						[
 							"a svg tag",

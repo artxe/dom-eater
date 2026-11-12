@@ -65,6 +65,10 @@ const mutations = [
 function dom_eater_items(source) {
 	/** @type {Set<string>} */
 	const items = new Set()
+	for (const node of parsePug(source).ast) {
+		visit(node, -1)
+	}
+	return items
 	/**
 	 * @param {import("dom-eater").AstNode} node
 	 * @param {number} parent
@@ -110,10 +114,6 @@ function dom_eater_items(source) {
 			}
 		}
 	}
-	for (const node of parsePug(source).ast) {
-		visit(node, -1)
-	}
-	return items
 }
 /**
  * @param {number} seed
@@ -160,9 +160,7 @@ export function pug_differential(count) {
 		]
 	)
 }
-/**
- * @returns {string[]}
- */
+/** @returns {string[]} */
 export function pug_fixture_problems() {
 	return fixtures.flatMap(
 		source => (pug_problems(source) ?? [ "rejected by Pug" ]).map(
@@ -200,13 +198,6 @@ function pug_items(source) {
 			line_starts.push(i + 1)
 		}
 	}
-	/**
-	 * @param {{ column: number, line: number }} position
-	 * @returns {number}
-	 */
-	function offset(position) {
-		return /** @type {number} */(line_starts[position.line - 1])/**/ + position.column - 1
-	}
 	/** @type {Set<string>} */
 	const items = new Set()
 	/** @type {Map<number, string>} */
@@ -232,6 +223,15 @@ function pug_items(source) {
 				`attribute ${range} ${JSON.stringify(token.name)} ${token.val === true ? "true" : JSON.stringify(String(token.val))}`
 			)
 		}
+	}
+	visit(ast, -1)
+	return items
+	/**
+	 * @param {{ column: number, line: number }} position
+	 * @returns {number}
+	 */
+	function offset(position) {
+		return /** @type {number} */(line_starts[position.line - 1])/**/ + position.column - 1
 	}
 	/**
 	 * @param {unknown} node
@@ -290,8 +290,6 @@ function pug_items(source) {
 			visit(record[key], inner)
 		}
 	}
-	visit(ast, -1)
-	return items
 }
 /**
  * @param {string} source

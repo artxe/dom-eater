@@ -178,6 +178,10 @@ function dom_eater_items(source) {
 	const ends = new Map()
 	/** @type {Set<string>} */
 	const items = new Set()
+	for (const node of ast) {
+		visit(node, -1)
+	}
+	return { ends, items }
 	/**
 	 * @param {import("dom-eater").AstNode} node
 	 * @param {number} parent
@@ -200,10 +204,6 @@ function dom_eater_items(source) {
 			visit(child, node.start)
 		}
 	}
-	for (const node of ast) {
-		visit(node, -1)
-	}
-	return { ends, items }
 }
 /**
  * @param {number} seed
@@ -212,6 +212,7 @@ function dom_eater_items(source) {
 export function html_document(seed) {
 	const next = random(seed)
 	let budget = 25
+	return generate("root", 0)
 	/**
 	 * @param {string} tag
 	 * @param {number} depth
@@ -237,7 +238,6 @@ export function html_document(seed) {
 		}
 		return source
 	}
-	return generate("root", 0)
 }
 /**
  * @param {string} source
@@ -252,6 +252,8 @@ function parse5_items(source) {
 	const ends = new Map()
 	/** @type {Set<string>} */
 	const items = new Set()
+	visit(root, -1)
+	return { ends, items }
 	/**
 	 * @param {DefaultTreeAdapterTypes.Node} node
 	 * @param {number} parent
@@ -287,8 +289,6 @@ function parse5_items(source) {
 			visit(node.content, inner)
 		}
 	}
-	visit(root, -1)
-	return { ends, items }
 }
 /**
  * @param {string} source

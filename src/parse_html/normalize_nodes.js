@@ -141,55 +141,6 @@ function open_element_name(open_elements, index) {
 export default function(nodes, errors, foreign_nodes) {
 	/** @type {import("../../private.js").OpenElement[]} */
 	const open_elements = [ { children: [], name: "" } ]
-	/**
-	 * @param {number} count
-	 * @returns {void}
-	 */
-	function close_open_elements(count) {
-		const closed = open_elements.splice(
-			open_elements.length - count,
-			count
-		)
-		for (let i = closed.length - 1; i >= 0; i--) {
-			const open_element = /** @type {import("../../private.js").OpenElement} */(closed[i])/**/
-			const element = /** @type {import("../../public.js").Element} */(open_element.element)/**/
-			if (!optional_end_tags.has(open_element.name)) {
-				errors.push(
-					create_ast_syntax_error(
-						`The "${element.name}" element is not closed.`,
-						element.start,
-						element.end
-					)
-				)
-			}
-		}
-		let siblings = current().children
-		for (const open_element of closed) {
-			const element = /** @type {import("../../public.js").Element} */(open_element.element)/**/
-			if (optional_end_tags.has(open_element.name)) {
-				element.children = open_element.children
-				siblings = element.children
-			} else {
-				for (const child of open_element.children) {
-					siblings.push(child)
-				}
-			}
-		}
-		for (let i = closed.length - 1; i >= 0; i--) {
-			const open_element = /** @type {import("../../private.js").OpenElement} */(closed[i])/**/
-			const element = /** @type {import("../../public.js").Element} */(open_element.element)/**/
-			const last_child = element.children[element.children.length - 1]
-			if (optional_end_tags.has(open_element.name) && last_child) {
-				element.end = last_child.end
-			}
-		}
-	}
-	/**
-	 * @returns {import("../../private.js").OpenElement}
-	 */
-	function current() {
-		return /** @type {import("../../private.js").OpenElement} */(open_elements[open_elements.length - 1])/**/
-	}/**/
 	for (const node of nodes) {
 		if (node.type == "Element" && node.subType == "close") {
 			const name = node.name.toLowerCase()
@@ -254,4 +205,51 @@ export default function(nodes, errors, foreign_nodes) {
 	}
 	close_open_elements(open_elements.length - 1)
 	return current().children
+	/**
+	 * @param {number} count
+	 * @returns {void}
+	 */
+	function close_open_elements(count) {
+		const closed = open_elements.splice(
+			open_elements.length - count,
+			count
+		)
+		for (let i = closed.length - 1; i >= 0; i--) {
+			const open_element = /** @type {import("../../private.js").OpenElement} */(closed[i])/**/
+			const element = /** @type {import("../../public.js").Element} */(open_element.element)/**/
+			if (!optional_end_tags.has(open_element.name)) {
+				errors.push(
+					create_ast_syntax_error(
+						`The "${element.name}" element is not closed.`,
+						element.start,
+						element.end
+					)
+				)
+			}
+		}
+		let siblings = current().children
+		for (const open_element of closed) {
+			const element = /** @type {import("../../public.js").Element} */(open_element.element)/**/
+			if (optional_end_tags.has(open_element.name)) {
+				element.children = open_element.children
+				siblings = element.children
+			} else {
+				for (const child of open_element.children) {
+					siblings.push(child)
+				}
+			}
+		}
+		for (let i = closed.length - 1; i >= 0; i--) {
+			const open_element = /** @type {import("../../private.js").OpenElement} */(closed[i])/**/
+			const element = /** @type {import("../../public.js").Element} */(open_element.element)/**/
+			const last_child = element.children[element.children.length - 1]
+			if (optional_end_tags.has(open_element.name) && last_child) {
+				element.end = last_child.end
+			}
+		}
+	}
+	/** @returns {import("../../private.js").OpenElement} */
+	function current() {
+		return /** @type {import("../../private.js").OpenElement} */(open_elements[open_elements.length - 1])/**/
+	}/**/
 }

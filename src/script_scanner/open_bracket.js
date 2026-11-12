@@ -117,8 +117,8 @@ export default function(text, index, state) {
 		bracket.kind = "["
 	} else if (
 		parent.body
-		&& index >= parent.body_start
-		&& (body_end_chars.includes(char) || identifier_part_regex.test(char) && !type_operators.has(word))
+			&& index >= parent.body_start
+			&& (body_end_chars.includes(char) || identifier_part_regex.test(char) && !type_operators.has(word))
 	) {
 		bracket.await_keyword = parent.body_keywords.includes("await")
 		bracket.expression_after = parent.body_declaration

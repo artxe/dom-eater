@@ -61,19 +61,6 @@ export default function(text, errors, template) {
 			errors.push(error)
 		}
 	}
-	/**
-	 * @param {import("../../public.js").AstNode} node
-	 * @returns {import("../../public.js").Script | undefined}
-	 */
-	function substitution_of(node) {
-		if (node.type != "Script" || node.subType != "block") {
-			return
-		}
-		const script = substitutions.get(node.start + offset)
-		return script?.end == node.end + offset
-			? script
-			: undefined
-	}
 	/** @type {import("../../public.js").AstNode[][]} */
 	const lists = [ nodes ]
 	for (let list = lists.pop(); list; list = lists.pop()) {
@@ -126,4 +113,17 @@ export default function(text, errors, template) {
 		}
 	}
 	return elements
+	/**
+	 * @param {import("../../public.js").AstNode} node
+	 * @returns {import("../../public.js").Script | undefined}
+	 */
+	function substitution_of(node) {
+		if (node.type != "Script" || node.subType != "block") {
+			return
+		}
+		const script = substitutions.get(node.start + offset)
+		return script?.end == node.end + offset
+			? script
+			: undefined
+	}
 }

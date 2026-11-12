@@ -268,9 +268,8 @@ function evaluate_condition(condition) {
 		/&&|\|\||==|!=|[!()]|[^\s!&|=()]+/g
 	) ?? []
 	let position = 0
-	/**
-	 * @returns {boolean}
-	 */
+	return or()
+	/** @returns {boolean} */
 	function and() {
 		let value = equality()
 		while (tokens[position] == "&&") {
@@ -279,9 +278,7 @@ function evaluate_condition(condition) {
 		}
 		return value
 	}
-	/**
-	 * @returns {boolean}
-	 */
+	/** @returns {boolean} */
 	function equality() {
 		let value = primary()
 		while (tokens[position] == "==" || tokens[position] == "!=") {
@@ -293,9 +290,7 @@ function evaluate_condition(condition) {
 		}
 		return value
 	}
-	/**
-	 * @returns {boolean}
-	 */
+	/** @returns {boolean} */
 	function or() {
 		let value = and()
 		while (tokens[position] == "||") {
@@ -304,9 +299,7 @@ function evaluate_condition(condition) {
 		}
 		return value
 	}
-	/**
-	 * @returns {boolean}
-	 */
+	/** @returns {boolean} */
 	function primary() {
 		const token = tokens[position++]
 		if (token == "!") {
@@ -319,7 +312,6 @@ function evaluate_condition(condition) {
 		}
 		return token == "true"
 	}
-	return or()
 }
 /**
  * @param {string} text

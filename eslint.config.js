@@ -6,7 +6,6 @@ export default [
 		ignores: [
 			".claude/settings*.json",
 			".tmp/**",
-			"coverage/**",
 			"test/fuzz/razor/bin/**",
 			"test/fuzz/razor/obj/**",
 			"types/**"

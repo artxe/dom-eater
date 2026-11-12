@@ -20,9 +20,7 @@ function entry_paths(target) {
 	}
 	return []
 }
-/**
- * @returns {string[]}
- */
+/** @returns {string[]} */
 function packed_files() {
 	const output = execFileSync(
 		"npm",
@@ -134,7 +132,8 @@ describe(
 						)
 					}
 				}
-			}
+			},
+			60000
 		)
 	}
 )

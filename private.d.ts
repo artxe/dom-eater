@@ -35,6 +35,11 @@ export type OpenElement = {
 	element?: Element
 	name: string
 }
+export type Positionless<T> = T extends readonly (infer U)[]
+	? Positionless<U>[]
+	: T extends Record<string, unknown>
+		? { [K in keyof T as Exclude<K, "end" | "start">]: Positionless<T[K]> }
+		: T
 export type PugCharState = {
 	escaped: boolean
 	has_dollar: boolean
