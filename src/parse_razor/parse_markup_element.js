@@ -284,14 +284,14 @@ function parse_end_tag_element(ctx, frames, index, mode) {
 		}${text.slice(i, name_token.end)}`
 		if (
 			mode == "code"
-			&& equals_ignore_case(name, "text")
-			&& frames.filter(
-				frame => equals_ignore_case(frame.name, "text")
-			).length == 1
-			&& equals_ignore_case(
-				/** @type {import("../../private.js").RazorFrame} */(frames[1])/**/.name,
-				"text"
-			)
+				&& equals_ignore_case(name, "text")
+				&& frames.filter(
+					frame => equals_ignore_case(frame.name, "text")
+				).length == 1
+				&& equals_ignore_case(
+					/** @type {import("../../private.js").RazorFrame} */(frames[1])/**/.name,
+					"text"
+				)
 		) {
 			i = name_token.end
 			if (html_token(text, i)?.kind == ">") {
@@ -337,8 +337,8 @@ function parse_end_tag_element(ctx, frames, index, mode) {
 	}
 	while (
 		frames.length > 1
-		&& !equals_ignore_case(current_frame(frames).name, name)
-		&& is_void(current_frame(frames).name)
+			&& !equals_ignore_case(current_frame(frames).name, name)
+			&& is_void(current_frame(frames).name)
 	) {
 		close_void(frames)
 	}
@@ -565,12 +565,12 @@ function parse_start_tag(ctx, frames, index, mode) {
 				const end_name = html_token(text, end_tag + 2)
 				if (
 					text[end_tag] != "<"
-					|| text[end_tag + 1] != "/"
-					|| end_name?.kind != "text"
-					|| !equals_ignore_case(
-						text.slice(end_tag + 2, end_name.end),
-						name
-					)
+						|| text[end_tag + 1] != "/"
+						|| end_name?.kind != "text"
+						|| !equals_ignore_case(
+							text.slice(end_tag + 2, end_name.end),
+							name
+						)
 				) {
 					tag_mode = "void"
 				}

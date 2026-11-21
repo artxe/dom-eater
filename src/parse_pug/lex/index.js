@@ -268,10 +268,10 @@ function advance(lexer) {
 		return named_block(lexer, append_regex, "append") || tag(lexer)
 	case "b":
 		return named_block(lexer, append_regex, "append")
-				|| named_block(lexer, prepend_regex, "prepend")
-				|| named_block(lexer, block_regex, "replace")
-				|| mixin_block(lexer)
-				|| tag(lexer)
+			|| named_block(lexer, prepend_regex, "prepend")
+			|| named_block(lexer, block_regex, "replace")
+			|| mixin_block(lexer)
+			|| tag(lexer)
 	case "c":
 		return case_keyword(lexer) || tag(lexer)
 	case "d":

@@ -98,6 +98,16 @@ export function typescript_ranges(code, jsx) {
 	const elements = []
 	/** @type {number[][]} */
 	const strings = []
+	visit(source, false)
+	elements.sort(
+		(a, b) => a[0] - b[0] || b[1] - a[1]
+	)
+	return {
+		elements,
+		strings: elements.length
+			? undefined
+			: strings
+	}
 	/**
 	 * @param {import("typescript").Node} node
 	 * @param {boolean} in_template
@@ -123,15 +133,5 @@ export function typescript_ranges(code, jsx) {
 				in_template || template_kinds.has(node.kind)
 			)
 		)
-	}
-	visit(source, false)
-	elements.sort(
-		(a, b) => a[0] - b[0] || b[1] - a[1]
-	)
-	return {
-		elements,
-		strings: elements.length
-			? undefined
-			: strings
 	}
 }

@@ -1,6 +1,4 @@
-/**
- * @returns {import("../../../private.js").PugCharState}
- */
+/** @returns {import("../../../private.js").PugCharState} */
 export default function() {
 	return {
 		escaped: false,
