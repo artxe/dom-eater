@@ -48,9 +48,7 @@ function resolvable(code) {
 	}
 	return true
 }
-/**
- * @returns {{ json: string, name: string, source: string }[]}
- */
+/** @returns {{ json: string, name: string, source: string }[]} */
 function shown_outputs() {
 	return [
 		...source.matchAll(
@@ -64,9 +62,7 @@ function shown_outputs() {
 		})
 	)
 }
-/**
- * @returns {number}
- */
+/** @returns {number} */
 function skipped() {
 	let count = 0
 	for (const match of source.matchAll(
@@ -79,9 +75,7 @@ function skipped() {
 	}
 	return count
 }
-/**
- * @returns {{ code: string, line: number }[]}
- */
+/** @returns {{ code: string, line: number }[]} */
 function ts_blocks() {
 	/** @type {{ code: string, line: number }[]} */
 	const blocks = []

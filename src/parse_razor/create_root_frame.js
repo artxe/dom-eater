@@ -1,6 +1,4 @@
-/**
- * @returns {import("../../private.js").RazorFrame}
- */
+/** @returns {import("../../private.js").RazorFrame} */
 export default function() {
 	return {
 		children: [],

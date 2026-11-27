@@ -889,15 +889,6 @@ function push_text(parser, sink, token) {
  * @returns {void}
  */
 function remap(ast, errors, offsets, base) {
-	/**
-	 * @param {number} index
-	 * @returns {number}
-	 */
-	function position(index) {
-		return base + (offsets
-			? /** @type {number} */(offsets[index])/**/
-			: index)
-	}
 	for (const error of errors) {
 		error.end = position(error.end)
 		error.start = position(error.start)
@@ -926,6 +917,15 @@ function remap(ast, errors, offsets, base) {
 				pending.push(script)
 			}
 		}
+	}
+	/**
+	 * @param {number} index
+	 * @returns {number}
+	 */
+	function position(index) {
+		return base + (offsets
+			? /** @type {number} */(offsets[index])/**/
+			: index)
 	}
 }
 /**

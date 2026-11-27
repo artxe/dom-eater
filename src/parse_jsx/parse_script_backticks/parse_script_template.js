@@ -40,28 +40,6 @@ export default function(
 	const state = create_scan_state(bracket)
 	/** @type {import("../../../public.js").String[]} */
 	const strings = []
-	/**
-	 * @param {number} end
-	 * @returns {import("../../../public.js").Script & { subType: "template" }}
-	 */
-	function substitution(end) {
-		return outer_elements
-			? {
-				end,
-				start,
-				strings,
-				subType: "template",
-				type: "Script"
-			}
-			: {
-				elements,
-				end,
-				start,
-				strings,
-				subType: "template",
-				type: "Script"
-			}
-	}
 	for (;;) {
 		const child_index = text.slice(child_pre_index).search(stop_script_template_regex)
 		if (child_index < 0) {
@@ -133,4 +111,26 @@ export default function(
 	const node = substitution(text.length)
 	unclosed_templates.add(node)
 	return node
+	/**
+	 * @param {number} end
+	 * @returns {import("../../../public.js").Script & { subType: "template" }}
+	 */
+	function substitution(end) {
+		return outer_elements
+			? {
+				end,
+				start,
+				strings,
+				subType: "template",
+				type: "Script"
+			}
+			: {
+				elements,
+				end,
+				start,
+				strings,
+				subType: "template",
+				type: "Script"
+			}
+	}
 }

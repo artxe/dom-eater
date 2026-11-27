@@ -347,6 +347,17 @@ export function entry_problems(name, source) {
 	}
 	/** @type {string[]} */
 	const problems = []
+	check(first, true)
+	check(plain, false)
+	if (serialize(first, false) != serialize(again, false)) {
+		problems.push("nondeterministic")
+	}
+	if (serialize(first, true) != serialize(plain, false)) {
+		problems.push(
+			"include_text changes the result"
+		)
+	}
+	return problems
 	/**
 	 * @param {{ ast: AstNode[], errors: AstSyntaxError[] }} result
 	 * @param {boolean} include_text
@@ -370,17 +381,6 @@ export function entry_problems(name, source) {
 			}
 		}
 	}
-	check(first, true)
-	check(plain, false)
-	if (serialize(first, false) != serialize(again, false)) {
-		problems.push("nondeterministic")
-	}
-	if (serialize(first, true) != serialize(plain, false)) {
-		problems.push(
-			"include_text changes the result"
-		)
-	}
-	return problems
 }
 /**
  * @param {keyof typeof entries} name
@@ -463,6 +463,8 @@ export function fuzz_source(name, seed) {
 export function last_element(ast) {
 	/** @type {Element | undefined} */
 	let last
+	ast.forEach(visit)
+	return last
 	/**
 	 * @param {AstNode} node
 	 * @returns {void}
@@ -487,8 +489,6 @@ export function last_element(ast) {
 			node.scripts.forEach(visit)
 		}
 	}
-	ast.forEach(visit)
-	return last
 }
 /**
  * @param {string} source

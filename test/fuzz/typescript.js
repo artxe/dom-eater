@@ -119,16 +119,6 @@ export function completion_problems(code, jsx, next) {
 	const source = parse_typescript(code, jsx)
 	/** @type {import("typescript").JsxAttribute[]} */
 	const attributes = []
-	/**
-	 * @param {import("typescript").Node} node
-	 * @returns {void}
-	 */
-	function visit(node) {
-		if (ts.isJsxAttribute(node) && node.initializer && ts.isStringLiteral(node.initializer)) {
-			attributes.push(node)
-		}
-		ts.forEachChild(node, visit)
-	}
 	visit(source)
 	if (!attributes.length) {
 		return []
@@ -158,6 +148,16 @@ export function completion_problems(code, jsx, next) {
 		: [
 			`typed ${JSON.stringify(typed)}: ${JSON.stringify(found)}, expected ${JSON.stringify(expected)}`
 		]
+	/**
+	 * @param {import("typescript").Node} node
+	 * @returns {void}
+	 */
+	function visit(node) {
+		if (ts.isJsxAttribute(node) && node.initializer && ts.isStringLiteral(node.initializer)) {
+			attributes.push(node)
+		}
+		ts.forEachChild(node, visit)
+	}
 }
 /**
  * @param {number} seed
@@ -166,6 +166,12 @@ export function completion_problems(code, jsx, next) {
 export function generated_program(seed) {
 	const next = random(seed)
 	let depth = 0
+	let code = ""
+	const count = 1 + Math.floor(next() * 4)
+	for (let i = 0; i < count; i++) {
+		code += expand(pick(next, statements)) + (next() < 0.5 ? "\n" : " ")
+	}
+	return code
 	/**
 	 * @param {string} template
 	 * @returns {string}
@@ -186,12 +192,6 @@ export function generated_program(seed) {
 			}
 		)
 	}
-	let code = ""
-	const count = 1 + Math.floor(next() * 4)
-	for (let i = 0; i < count; i++) {
-		code += expand(pick(next, statements)) + (next() < 0.5 ? "\n" : " ")
-	}
-	return code
 }
 /**
  * @param {string} code
@@ -234,31 +234,6 @@ export function probed_programs(code, jsx, next) {
 	const statement_starts = []
 	/** @type {[ number, number ][]} */
 	const operands = []
-	/**
-	 * @param {import("typescript").Node} node
-	 * @returns {void}
-	 */
-	function visit(node) {
-		if (ts.isBlock(node) || ts.isSourceFile(node) || ts.isModuleBlock(node)) {
-			for (const statement of node.statements) {
-				statement_starts.push(statement.getStart(source))
-			}
-		}
-		const { parent } = node
-		if (
-			ts.isIdentifier(node) && (
-				ts.isBinaryExpression(parent) && parent.right == node
-				|| ts.isCallExpression(parent) && parent.arguments.includes(node)
-				|| ts.isReturnStatement(parent)
-				|| ts.isConditionalExpression(parent)
-			)
-		) {
-			operands.push(
-				[ node.getStart(source), node.end ]
-			)
-		}
-		ts.forEachChild(node, visit)
-	}
 	visit(source)
 	/** @type {string[]} */
 	const programs = []
@@ -280,6 +255,31 @@ export function probed_programs(code, jsx, next) {
 		)
 	}
 	return programs
+	/**
+	 * @param {import("typescript").Node} node
+	 * @returns {void}
+	 */
+	function visit(node) {
+		if (ts.isBlock(node) || ts.isSourceFile(node) || ts.isModuleBlock(node)) {
+			for (const statement of node.statements) {
+				statement_starts.push(statement.getStart(source))
+			}
+		}
+		const { parent } = node
+		if (
+			ts.isIdentifier(node) && (
+				ts.isBinaryExpression(parent) && parent.right == node
+					|| ts.isCallExpression(parent) && parent.arguments.includes(node)
+					|| ts.isReturnStatement(parent)
+					|| ts.isConditionalExpression(parent)
+			)
+		) {
+			operands.push(
+				[ node.getStart(source), node.end ]
+			)
+		}
+		ts.forEachChild(node, visit)
+	}
 }
 /**
  * @param {string} code
@@ -319,23 +319,6 @@ export function typescript_corpus(jsx) {
 	}
 	/** @type {string[]} */
 	const files = []
-	/**
-	 * @param {string} directory
-	 * @returns {void}
-	 */
-	function walk(directory) {
-		for (const entry of readdirSync(
-			directory,
-			{ withFileTypes: true }
-		)) {
-			const path = join(directory, entry.name)
-			if (entry.isDirectory()) {
-				walk(path)
-			} else if ((jsx ? /\.(?:[cm]?js|jsx|tsx)$/ : /\.[cm]?ts$/).test(entry.name) && statSync(path).size < 500000) {
-				files.push(path)
-			}
-		}
-	}
 	walk(
 		fileURLToPath(
 			new URL(
@@ -364,6 +347,23 @@ export function typescript_corpus(jsx) {
 		}
 	}
 	report(failures)
+	/**
+	 * @param {string} directory
+	 * @returns {void}
+	 */
+	function walk(directory) {
+		for (const entry of readdirSync(
+			directory,
+			{ withFileTypes: true }
+		)) {
+			const path = join(directory, entry.name)
+			if (entry.isDirectory()) {
+				walk(path)
+			} else if ((jsx ? /\.(?:[cm]?js|jsx|tsx)$/ : /\.[cm]?ts$/).test(entry.name) && statSync(path).size < 500000) {
+				files.push(path)
+			}
+		}
+	}
 }
 /**
  * @param {boolean} jsx

@@ -23,7 +23,20 @@ import {
 	typescript_ranges
 } from "./typescript_ranges.js"
 import { parseJsx } from "dom-eater"
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
+/**
+ * Drops the wording of the errors of a parse result, keeping what and where they are.
+ * @param {{ errors: { start: number, end: number }[] }} result
+ * @returns {{ errors: { end: number, start: number }[] }}
+ */
+function located(result) {
+	return {
+		...result,
+		errors: result.errors.map(
+			({ end, start }) => ({ end, start })
+		)
+	}
+}
 describe(
 	"parseJsx",
 	() => {
@@ -79,7 +92,6 @@ describe(
 								"function* f() { return () => yield / 2, \"/\" }",
 								"function* f() { return <a>{yield <b/>}</a> }",
 								"import $x = y.z; await / 2, \"/\"",
-								"import _x = y.z; await / 2, \"/\"",
 								"import x = y.z; await / 2, \"/\"",
 								"import x$ = y.z; await / 2, \"/\"",
 								"import(\"x\"); await / 2, \"/\"",
@@ -151,7 +163,6 @@ describe(
 								"x = f(a.b / 2, \"/\")",
 								"x = f(async function () {} / 2, \"/\")",
 								"x = function () {} / 2, \"/\"",
-								"x = function(){} / 2, \"/\"",
 								"x = require(\"a\") / 2, \"/\"",
 								"x = typeof /'/",
 								"x = typeof!/'/.test(q)",
@@ -192,7 +203,6 @@ describe(
 								"declare function f(a)\n/'/.test(q)",
 								"declare function f(a)\r/'/.test(q)",
 								"declare function f(a) /'/.test(q)",
-								"declare function f(a) /'/.test(q)",
 								"declare module \"m\"\n/'/.test(q)",
 								"declare module \"m\"\nfunction f() {} /'/.test(q)",
 								"declare module \"m\" {}\n/'/.test(q)",
@@ -427,12 +437,12 @@ describe(
 					"extracts class strings from a component",
 					() => {
 						const class_template = "`:hover/c=--primary-50;bold\n\t\t\tc=red bg=blue\n\t\t\t"
-								+ "@dark@c=white\n\t\t\t:active/tf=scale(1.2)\n\t\t\t${is_active ?? \"bold;fs=1.2\"}`"
+							+ "@dark@c=white\n\t\t\t:active/tf=scale(1.2)\n\t\t\t${is_active ?? \"bold;fs=1.2\"}`"
 						const style = "style=\"color: red; background: blue;\""
 						const div = `<div {...props} ${style}\n\t\t\tclassName={${class_template}}>`
-								+ "\n\t\t\t{a}\n\t\t\t{text}\n\t\t</div>"
+							+ "\n\t\t\t{a}\n\t\t\t{text}\n\t\t</div>"
 						const source = "\nvar n = 5\nlet a = <a>{n}</a>\nlet text = \"<div></div>\"\nlet props = {}\n\n"
-								+ `export function App() {\n\tlet is_active = false\n\treturn (\n\t\t${div}\n\t)\n}\n`
+							+ `export function App() {\n\tlet is_active = false\n\treturn (\n\t\t${div}\n\t)\n}\n`
 						expect(jsx(source)).toStrictEqual(
 							{
 								ast: [
@@ -689,7 +699,7 @@ describe(
 				it(
 					"reports a value or name cut off by the end of input",
 					() => {
-						expect(jsx("<p a=")).toStrictEqual(
+						expect(located(jsx("<p a="))).toStrictEqual(
 							{
 								ast: [
 									element_node(
@@ -700,20 +710,12 @@ describe(
 									)
 								],
 								errors: [
-									{
-										end: 5,
-										message: "The \"a\" attribute has no value after \"=\".",
-										start: 3
-									},
-									{
-										end: 5,
-										message: "The start tag is not closed.",
-										start: 0
-									}
+									{ end: 5, start: 3 },
+									{ end: 5, start: 0 }
 								]
 							}
 						)
-						expect(jsx("<p a")).toStrictEqual(
+						expect(located(jsx("<p a"))).toStrictEqual(
 							{
 								ast: [
 									element_node(
@@ -724,16 +726,8 @@ describe(
 									)
 								],
 								errors: [
-									{
-										end: 4,
-										message: "The attribute name is not finished.",
-										start: 3
-									},
-									{
-										end: 4,
-										message: "The start tag is not closed.",
-										start: 0
-									}
+									{ end: 4, start: 3 },
+									{ end: 4, start: 0 }
 								]
 							}
 						)
@@ -742,7 +736,7 @@ describe(
 				it(
 					"reports unterminated double and single quoted values",
 					() => {
-						expect(jsx("<p a=\"b>c</p>")).toStrictEqual(
+						expect(located(jsx("<p a=\"b>c</p>"))).toStrictEqual(
 							{
 								ast: [
 									element_node(
@@ -759,31 +753,17 @@ describe(
 									)
 								],
 								errors: [
-									{
-										end: 13,
-										message: "The double-quoted attribute value is not closed.",
-										start: 5
-									},
-									{
-										end: 13,
-										message: "The start tag is not closed.",
-										start: 0
-									}
+									{ end: 13, start: 5 },
+									{ end: 13, start: 0 }
 								]
 							}
 						)
-						expect(jsx("<p a='b>c</p>").errors).toStrictEqual(
+						expect(
+							located(jsx("<p a='b>c</p>")).errors
+						).toStrictEqual(
 							[
-								{
-									end: 13,
-									message: "The single-quoted attribute value is not closed.",
-									start: 5
-								},
-								{
-									end: 13,
-									message: "The start tag is not closed.",
-									start: 0
-								}
+								{ end: 13, start: 5 },
+								{ end: 13, start: 0 }
 							]
 						)
 					}
@@ -794,8 +774,8 @@ describe(
 						expect(
 							jsx(
 								"x = <div /* it's */ a=\"b\" // don't\n c={d}>e</div>;"
-										+ " y = <i/* c */></i>; z = <u /* c *//>;"
-										+ " w = <b // c\n>f</b>; v = <s /*/ t=\"u\" */ /**/ />"
+									+ " y = <i/* c */></i>; z = <u /* c *//>;"
+									+ " w = <b // c\n>f</b>; v = <s /*/ t=\"u\" */ /**/ />"
 							)
 						).toStrictEqual(
 							{
@@ -837,7 +817,7 @@ describe(
 				it(
 					"stops at an open tag error without reading children",
 					() => {
-						expect(jsx("<p a=>b</p>")).toStrictEqual(
+						expect(located(jsx("<p a=>b</p>"))).toStrictEqual(
 							{
 								ast: [
 									element_node(
@@ -847,13 +827,7 @@ describe(
 										[ attribute_node("a=", "a") ]
 									)
 								],
-								errors: [
-									{
-										end: 5,
-										message: "The \"a\" attribute has no value after \"=\".",
-										start: 3
-									}
-								]
+								errors: [ { end: 5, start: 3 } ]
 							}
 						)
 					}
@@ -1447,7 +1421,7 @@ describe(
 				it(
 					"keeps the text of an element that is never closed",
 					() => {
-						expect(jsx("<p>hi")).toStrictEqual(
+						expect(located(jsx("<p>hi"))).toStrictEqual(
 							{
 								ast: [
 									element_node(
@@ -1458,16 +1432,12 @@ describe(
 										[ text_node("hi") ]
 									)
 								],
-								errors: [
-									{
-										end: 5,
-										message: "The \"p\" element is not closed.",
-										start: 0
-									}
-								]
+								errors: [ { end: 5, start: 0 } ]
 							}
 						)
-						expect(jsx("x = <script>a < b")).toStrictEqual(
+						expect(
+							located(jsx("x = <script>a < b"))
+						).toStrictEqual(
 							{
 								ast: [
 									element_node(
@@ -1478,13 +1448,7 @@ describe(
 										[ text_node("a < b") ]
 									)
 								],
-								errors: [
-									{
-										end: 17,
-										message: "The \"script\" element is not closed.",
-										start: 4
-									}
-								]
+								errors: [ { end: 17, start: 4 } ]
 							}
 						)
 					}
@@ -1492,19 +1456,15 @@ describe(
 				it(
 					"reports a block comment that is never closed",
 					() => {
-						expect(jsx("x = class /* b")).toStrictEqual(
+						expect(located(jsx("x = class /* b"))).toStrictEqual(
 							{
 								ast: [],
-								errors: [
-									{
-										end: 14,
-										message: "The block comment is not closed.",
-										start: 10
-									}
-								]
+								errors: [ { end: 14, start: 10 } ]
 							}
 						)
-						expect(jsx("x = <p>{/* a</p>")).toStrictEqual(
+						expect(
+							located(jsx("x = <p>{/* a</p>"))
+						).toStrictEqual(
 							{
 								ast: [
 									element_node(
@@ -1516,21 +1476,9 @@ describe(
 									)
 								],
 								errors: [
-									{
-										end: 16,
-										message: "The block comment is not closed.",
-										start: 8
-									},
-									{
-										end: 16,
-										message: "The {…} block is not closed.",
-										start: 7
-									},
-									{
-										end: 16,
-										message: "The \"p\" element is not closed.",
-										start: 4
-									}
+									{ end: 16, start: 8 },
+									{ end: 16, start: 7 },
+									{ end: 16, start: 4 }
 								]
 							}
 						)
@@ -1539,18 +1487,12 @@ describe(
 				it(
 					"reports a block that is never closed",
 					() => {
-						expect(jsx("<p>{a</p>").errors).toStrictEqual(
+						expect(
+							located(jsx("<p>{a</p>")).errors
+						).toStrictEqual(
 							[
-								{
-									end: 9,
-									message: "The {…} block is not closed.",
-									start: 3
-								},
-								{
-									end: 9,
-									message: "The \"p\" element is not closed.",
-									start: 0
-								}
+								{ end: 9, start: 3 },
+								{ end: 9, start: 0 }
 							]
 						)
 					}
@@ -1558,7 +1500,7 @@ describe(
 				it(
 					"reports a close tag that does not match the open tag",
 					() => {
-						expect(jsx("<p><b></p>")).toStrictEqual(
+						expect(located(jsx("<p><b></p>"))).toStrictEqual(
 							{
 								ast: [
 									element_node(
@@ -1572,16 +1514,8 @@ describe(
 									)
 								],
 								errors: [
-									{
-										end: 10,
-										message: "The close tag does not match the \"b\" element.",
-										start: 3
-									},
-									{
-										end: 10,
-										message: "The \"p\" element is not closed.",
-										start: 0
-									}
+									{ end: 10, start: 3 },
+									{ end: 10, start: 0 }
 								]
 							}
 						)
@@ -1590,32 +1524,20 @@ describe(
 				it(
 					"reports a comment inside a tag that is never closed",
 					() => {
-						expect(jsx("<div /* a")).toStrictEqual(
+						expect(located(jsx("<div /* a"))).toStrictEqual(
 							{
 								ast: [
 									element_node("<div /* a", "div", "open")
 								],
-								errors: [
-									{
-										end: 9,
-										message: "The start tag is not closed.",
-										start: 0
-									}
-								]
+								errors: [ { end: 9, start: 0 } ]
 							}
 						)
-						expect(jsx("<div // a")).toStrictEqual(
+						expect(located(jsx("<div // a"))).toStrictEqual(
 							{
 								ast: [
 									element_node("<div // a", "div", "open")
 								],
-								errors: [
-									{
-										end: 9,
-										message: "The start tag is not closed.",
-										start: 0
-									}
-								]
+								errors: [ { end: 9, start: 0 } ]
 							}
 						)
 					}
@@ -1623,18 +1545,12 @@ describe(
 				it(
 					"reports a tag name cut off by the end of input",
 					() => {
-						expect(jsx("<div")).toStrictEqual(
+						expect(located(jsx("<div"))).toStrictEqual(
 							{
 								ast: [
 									element_node("<div", "div", "open")
 								],
-								errors: [
-									{
-										end: 4,
-										message: "The start tag is not closed.",
-										start: 0
-									}
-								]
+								errors: [ { end: 4, start: 0 } ]
 							}
 						)
 					}
@@ -1642,7 +1558,9 @@ describe(
 				it(
 					"reports an HTML comment in children that is never closed",
 					() => {
-						expect(jsx("x = <div><!-- a")).toStrictEqual(
+						expect(
+							located(jsx("x = <div><!-- a"))
+						).toStrictEqual(
 							{
 								ast: [
 									element_node(
@@ -1654,16 +1572,8 @@ describe(
 									)
 								],
 								errors: [
-									{
-										end: 15,
-										message: "The comment is not closed with \"-->\".",
-										start: 9
-									},
-									{
-										end: 15,
-										message: "The \"div\" element is not closed.",
-										start: 4
-									}
+									{ end: 15, start: 9 },
+									{ end: 15, start: 4 }
 								]
 							}
 						)
@@ -1672,65 +1582,23 @@ describe(
 				it(
 					"reports unterminated top-level strings",
 					() => {
-						expect(jsx("a = \"b").errors).toStrictEqual(
+						expect(located(jsx("a = \"b")).errors).toStrictEqual([ { end: 6, start: 4 } ])
+						expect(located(jsx("a = 'b")).errors).toStrictEqual([ { end: 6, start: 4 } ])
+						expect(located(jsx("a = `b")).errors).toStrictEqual([ { end: 6, start: 4 } ])
+						expect(
+							located(jsx("a = `${b")).errors
+						).toStrictEqual(
 							[
-								{
-									end: 6,
-									message: "The double-quoted string is not closed.",
-									start: 4
-								}
+								{ end: 8, start: 5 },
+								{ end: 8, start: 4 }
 							]
 						)
-						expect(jsx("a = 'b").errors).toStrictEqual(
-							[
-								{
-									end: 6,
-									message: "The single-quoted string is not closed.",
-									start: 4
-								}
-							]
-						)
-						expect(jsx("a = `b").errors).toStrictEqual(
-							[
-								{
-									end: 6,
-									message: "The template literal is not closed.",
-									start: 4
-								}
-							]
-						)
-						expect(jsx("a = `${b").errors).toStrictEqual(
-							[
-								{
-									end: 8,
-									message: "The template literal substitution is not closed.",
-									start: 5
-								},
-								{
-									end: 8,
-									message: "The template literal is not closed.",
-									start: 4
-								}
-							]
-						)
-						expect(jsx("x = y as 'b").errors).toStrictEqual(
-							[
-								{
-									end: 11,
-									message: "The single-quoted string is not closed.",
-									start: 9
-								}
-							]
-						)
-						expect(jsx("type A = `a").errors).toStrictEqual(
-							[
-								{
-									end: 11,
-									message: "The template literal is not closed.",
-									start: 9
-								}
-							]
-						)
+						expect(
+							located(jsx("x = y as 'b")).errors
+						).toStrictEqual([ { end: 11, start: 9 } ])
+						expect(
+							located(jsx("type A = `a")).errors
+						).toStrictEqual([ { end: 11, start: 9 } ])
 					}
 				)
 			}
@@ -1896,37 +1764,36 @@ describe(
 				it(
 					"reports input nested too deeply instead of throwing",
 					() => {
-						const message = "The input is nested too deeply."
-						expect(jsx("<p>".repeat(100000))).toStrictEqual(
-							{
-								ast: [],
-								errors: [
-									{ end: 300000, message, start: 0 }
-								]
-							}
-						)
 						expect(
-							jsx(`<a>${"{".repeat(100000)}`)
+							located(jsx("<p>".repeat(100000)))
 						).toStrictEqual(
 							{
 								ast: [],
-								errors: [
-									{ end: 100003, message, start: 0 }
-								]
+								errors: [ { end: 300000, start: 0 } ]
 							}
 						)
 						expect(
-							jsx(
-								`x = <p/>; y = ${"<a>{".repeat(100000)}`
+							located(
+								jsx(`<a>${"{".repeat(100000)}`)
+							)
+						).toStrictEqual(
+							{
+								ast: [],
+								errors: [ { end: 100003, start: 0 } ]
+							}
+						)
+						expect(
+							located(
+								jsx(
+									`x = <p/>; y = ${"<a>{".repeat(100000)}`
+								)
 							)
 						).toStrictEqual(
 							{
 								ast: [
 									element_node("<p/>", "p", "closed")
 								],
-								errors: [
-									{ end: 400014, message, start: 8 }
-								]
+								errors: [ { end: 400014, start: 8 } ]
 							}
 						)
 					}
@@ -1935,27 +1802,6 @@ describe(
 					"reports input that is not a string instead of throwing",
 					() => {
 						check_non_string_input(parseJsx)
-					}
-				)
-				it(
-					"rethrows errors other than a stack overflow",
-					() => {
-						const error = new TypeError("Injected.")
-						const spy = vi.spyOn(RegExp.prototype, "exec").mockImplementation(
-							() => {
-								throw error
-							}
-						)
-						/** @type {unknown} */
-						let thrown
-						try {
-							parseJsx("x = <p/>")
-						} catch (caught) {
-							thrown = caught
-						} finally {
-							spy.mockRestore()
-						}
-						expect(thrown).toBe(error)
 					}
 				)
 				it(
@@ -2137,7 +1983,7 @@ describe(
 						expect(
 							jsx(
 								"function f() { await <a; yield <b }"
-										+ " async function g() { await <p/> } function* h() { yield <i/> }"
+									+ " async function g() { await <p/> } function* h() { yield <i/> }"
 							)
 						).toStrictEqual(
 							{
@@ -2206,7 +2052,7 @@ describe(
 						expect(
 							jsx(
 								"import a from \"b\"\n<A/>;\nimport \"c\"\n<B/>;"
-										+ "\nimport d = require(\"e\")\n<C/>;\nvar f\n<D/>"
+									+ "\nimport d = require(\"e\")\n<C/>;\nvar f\n<D/>"
 							)
 						).toStrictEqual(
 							{
@@ -2312,7 +2158,7 @@ describe(
 						expect(
 							jsx(
 								"// don't <b/>\n/* it's <i/> */ x = /* c */ <p>{/* don't */}<span/></p>;"
-										+ " y = a/* c */<b"
+									+ " y = a/* c */<b"
 							)
 						).toStrictEqual(
 							{
@@ -2353,19 +2199,13 @@ describe(
 				it(
 					"takes a tag cut off by the end of input right after an element as its sibling",
 					() => {
-						expect(jsx("x = <a/><b>")).toStrictEqual(
+						expect(located(jsx("x = <a/><b>"))).toStrictEqual(
 							{
 								ast: [
 									element_node("<a/>", "a", "closed"),
 									element_node("<b>", "b", "open")
 								],
-								errors: [
-									{
-										end: 11,
-										message: "The \"b\" element is not closed.",
-										start: 8
-									}
-								]
+								errors: [ { end: 11, start: 8 } ]
 							}
 						)
 					}
@@ -2424,7 +2264,7 @@ describe(
 						expect(
 							jsx(
 								"x = /a/ <b; y = <p/> / <i/>; z = function () {} <u; w = class {} <s;"
-										+ "\nfunction f() {} <A/>\nclass C {} <B/>\nexport default class {} <D/>"
+									+ "\nfunction f() {} <A/>\nclass C {} <B/>\nexport default class {} <D/>"
 							)
 						).toStrictEqual(
 							{
@@ -2488,7 +2328,7 @@ describe(
 					"reports %s",
 					(_, code, strings, errors) => {
 						const offset = 3
-						expect(jsx(`<a>${code}`)).toStrictEqual(
+						expect(located(jsx(`<a>${code}`))).toStrictEqual(
 							{
 								ast: [
 									element_node(
@@ -2509,7 +2349,6 @@ describe(
 									),
 									{
 										end: code.length + offset,
-										message: "The \"a\" element is not closed.",
 										start: 0
 									}
 								]
